@@ -33,7 +33,7 @@ The generator writes the deployable static site to `dist/`.
 
 `.github/workflows/pages.yml` builds the site on every push to `main` and deploys `dist/` with GitHub Pages.
 
-Set **Repository Settings → Pages → Source → GitHub Actions** and configure the DNS for `blog.enthernet.com` to the GitHub Pages target. The generated site includes `CNAME` with `blog.enthernet.com`.
+Repository Pages source is configured for **GitHub Actions**. The custom domain is `blog.enthernet.com`, and the generated site includes a matching `CNAME` file.
 
 ## Evidence policy
 
