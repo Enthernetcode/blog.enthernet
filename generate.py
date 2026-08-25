@@ -1,176 +1,394 @@
 from pathlib import Path
 from html import escape
-import re, shutil
+from datetime import datetime, timezone
+import json
+import re
+import shutil
+
+from content.aws import AWS_DAYS, UNVERIFIED_AWS
+from content.ansible import ANSIBLE_DAYS
+from content.linux_networking import LINUX_NETWORKING_DAYS
+from content.docker import DOCKER_DAYS
+from content.kubernetes import KUBERNETES_DAYS
+from content.cicd import CICD_DAYS
 
 ROOT = Path(__file__).parent
-OUT = ROOT / "dist"
+DIST = ROOT / "dist"
+ASSETS = DIST / "assets"
 BASE = "https://blog.enthernet.com"
 
-if OUT.exists():
-    shutil.rmtree(OUT)
-OUT.mkdir()
+if DIST.exists():
+    shutil.rmtree(DIST)
+ASSETS.mkdir(parents=True)
 
-DAYS = {
-1:("Topic pending archive verification","AWS Networking Foundations"),2:("IAM Users & Least Privilege","AWS Networking Foundations"),3:("Topic pending archive verification","AWS Networking Foundations"),4:("Security Groups","AWS Networking Foundations"),5:("Topic pending archive verification","AWS Networking Foundations"),6:("Topic pending archive verification","AWS Networking Foundations"),7:("Topic pending archive verification","AWS Networking Foundations"),8:("Topic pending archive verification","AWS Networking Foundations"),9:("Topic pending archive verification","AWS Networking Foundations"),10:("Topic pending archive verification","AWS Networking Foundations"),11:("VPC Endpoints","AWS Networking Foundations"),12:("VPC Peering","AWS Networking Foundations"),13:("AWS Transit Gateway","AWS Networking Foundations"),14:("Topic pending archive verification","AWS Networking Foundations"),15:("Topic pending archive verification","AWS Networking Foundations"),16:("Auto Scaling","AWS Networking Foundations"),17:("Topic pending archive verification","AWS Networking Foundations"),18:("Topic pending archive verification","AWS Networking Foundations"),19:("AWS Config","AWS Networking Foundations"),20:("AWS Systems Manager","AWS Networking Foundations"),21:("AWS CloudFormation","AWS Networking Foundations"),22:("AWS CDK","AWS Networking Foundations"),23:("Terraform Introduction","AWS Networking Foundations"),
-24:("Introduction to Ansible","Infrastructure Automation"),25:("First Ansible Playbook","Infrastructure Automation"),26:("Ansible Variables","Infrastructure Automation"),27:("Ansible Inventory","Infrastructure Automation"),28:("Ansible Patterns","Infrastructure Automation"),29:("Ansible Ad-Hoc Commands","Infrastructure Automation"),30:("Ansible Modules","Infrastructure Automation"),31:("Ansible Facts","Infrastructure Automation"),32:("Ansible Roles","Infrastructure Automation"),33:("host_vars, group_vars & register","Infrastructure Automation"),34:("Conditionals in Ansible","Infrastructure Automation"),35:("Jinja2 Templates","Infrastructure Automation"),36:("Ansible Handlers","Infrastructure Automation"),37:("Ansible Loops","Infrastructure Automation"),38:("Blocks, Rescue & Always","Infrastructure Automation"),39:("Ansible Galaxy Collections","Infrastructure Automation"),40:("LAMP Automation Capstone","Infrastructure Automation"),
-41:("Linux Filesystem","Linux Administration"),42:("Linux Permissions","Linux Administration"),43:("Users, Groups & sudo","Linux Administration"),44:("Processes & Signals","Linux Administration"),45:("systemd","Linux Administration"),46:("journald","Linux Administration"),47:("Cron vs systemd Timers","Linux Administration"),48:("apt & dnf","Linux Administration"),49:("SSH Deep Dive","Linux Administration"),50:("Bash Scripting Automation","Linux Administration"),51:("Linux Networking Tools","Linux Administration"),52:("Linux Hardening","Linux Administration"),
-53:("TCP vs UDP","Networking Deep Dive"),54:("DNS & Cloud Security","Networking Deep Dive"),55:("DHCP","Networking Deep Dive"),56:("HTTP vs HTTPS","Networking Deep Dive"),57:("TLS 1.3 Handshake","Networking Deep Dive"),58:("Nginx Reverse Proxy","Networking Deep Dive"),59:("Load Balancing Concepts","Networking Deep Dive"),60:("Network Troubleshooting Sequence","Networking Deep Dive"),
-61:("Why Containers","Docker"),62:("Docker Architecture","Docker"),63:("Docker Images","Docker"),64:("Docker Container Lifecycle","Docker"),65:("Docker Volumes","Docker"),66:("Docker Networks","Docker"),67:("Docker Compose","Docker"),68:("Dockerfiles","Docker"),69:("Container Security","Docker"),70:("Docker Deployment","Docker"),
-71:("Kubernetes Architecture","Kubernetes"),72:("Kubernetes Pods","Kubernetes"),73:("Kubernetes ReplicaSets","Kubernetes"),74:("Kubernetes Deployments","Kubernetes"),75:("Kubernetes Services","Kubernetes"),76:("Kubernetes Namespaces","Kubernetes"),77:("Kubernetes ConfigMaps","Kubernetes"),78:("Kubernetes Secrets","Kubernetes"),79:("Kubernetes Persistent Storage","Kubernetes"),80:("Kubernetes Ingress","Kubernetes"),81:("Helm","Kubernetes"),82:("Kubernetes Production Deployment","Kubernetes"),83:("CI/CD Foundations","CI/CD & Observability")
-}
-UNCERTAIN = {1,3,5,6,7,8,9,10,14,15,17,18}
-FUTURE = {84:"GitHub Actions",85:"Pipeline Secrets",86:"Automated Testing & Deploy",87:"Prometheus",88:"Grafana",89:"Centralized Logging",90:"Monitoring Dashboard",91:"Shared Responsibility",92:"IAM Best Practices",93:"Secrets Management",94:"GuardDuty & Security Hub",95:"Incident Response",96:"Infrastructure Hardening",97:"DevSecOps Integration",98:"Production Three-Tier Infrastructure",99:"End-to-End Deploy, Monitoring & Security Review",100:"Showcase + Lessons Learned"}
-
-DETAILS = {
-40:("A capstone that combines roles for common setup, Apache, PHP and MySQL into one reproducible LAMP deployment.", "Automation gets interesting when failure handling matters: service conflicts, package failures and handlers must be treated as part of the design, not as surprises."),
-52:("Hardening Linux by reducing exposed services, applying a default-deny firewall stance and tightening SSH and privilege boundaries.", "Every listening port needs an owner and a reason. A hardening checklist that ignores service inventory is mostly decoration."),
-55:("How DHCP assigns network configuration using the client/server exchange carried over UDP.", "The easy-to-mix-up detail: DHCP servers listen on UDP 67 and clients use UDP 68."),
-57:("A practical look at TLS 1.3, certificate-chain validation, SNI and what actually happens before encrypted HTTP begins.", "Certificate validity is not enough; the client must be able to build a trusted chain, including the required intermediate certificates."),
-58:("Using Nginx as a reverse proxy between clients and an application service, including forwarding headers and loopback-bound backends.", "X-Forwarded-For only helps if the application knows which proxies are trusted; otherwise a header can be forged by the client."),
-60:("A repeatable troubleshooting order for network failures: DNS, route, transport, TLS, proxy, backend and finally system pressure such as disk exhaustion.", "Changing random configuration is not troubleshooting. A fixed sequence prevents one symptom from sending you three layers away from the fault."),
-61:("Why containers exist: package the application and its userspace dependencies while isolating processes, networking and mounts on a shared host kernel.", "A container is not a tiny virtual machine. It normally shares the host kernel, which is both the efficiency win and part of the security model."),
-62:("The Docker client, daemon, image store, registry and runtime path that turns an image into a running container.", "The CLI is not the container runtime itself; it asks the daemon to perform the lifecycle work."),
-63:("How layered Docker images are built, tagged, cached and reused to create containers.", "Layer order affects rebuild speed and image size. Frequently changing files belong later when you want useful build-cache hits."),
-64:("The container lifecycle from create and start through stop, restart and removal, with the difference between container state and image state.", "Deleting a container does not delete the image it came from, and deleting the container also should not be confused with deleting durable storage."),
-65:("How volumes separate durable application data from the lifecycle of an individual container.", "If important state exists only in the writable container layer, container replacement becomes a data-loss procedure with better branding."),
-66:("Container communication through Docker networks, especially user-defined bridge networks and name-based service discovery.", "Container IP addresses are disposable. On a user-defined network, applications should use names or aliases rather than hard-coded container IPs."),
-67:("Using Docker Compose to define multi-container applications, shared networks, environment configuration and volumes in one declarative file.", "Compose start order does not mean application readiness. A dependency can be running while the service inside it is still unavailable."),
-68:("Building repeatable application images with Dockerfiles, including build context, COPY, RUN, WORKDIR, USER and startup instructions.", "COPY reads from the build context, not arbitrary paths on the host. Build context mistakes are a common reason files appear to 'exist' but cannot be copied."),
-69:("Reducing the damage a compromised container can do by running as non-root, making the root filesystem read-only, dropping Linux capabilities and avoiding privileged mode.", "Isolation is not the same thing as trust. If the application is compromised, the runtime should expose as little privilege and writable surface as possible."),
-70:("Bringing the Docker phase together into a deployable application workflow, connecting image build, runtime configuration, networking, storage and security decisions.", "A deployment is not complete because `docker run` succeeded. Persistence, restart behavior, logs, health and least privilege determine whether it survives real use."),
-71:("Kubernetes architecture: the control plane, API server, scheduler, controllers, etcd and node components that continuously reconcile desired state.", "Kubernetes is reconciliation-driven. You describe desired state and controllers keep working toward it rather than executing a one-time script."),
-72:("Pods as Kubernetes' smallest deployable unit, grouping one or more containers that share network and selected storage context.", "Containers in the same Pod share a network namespace, so they communicate over localhost rather than through a Service."),
-73:("ReplicaSets and the controller loop that maintains a desired number of matching Pod replicas.", "A selector mismatch between the controller and Pod template can produce ownership problems that look far stranger than the YAML that caused them."),
-74:("Deployments as the higher-level controller that manages ReplicaSets and declarative rolling application updates.", "The chain is Deployment → ReplicaSet → Pods. Managing ReplicaSets directly throws away the rollout machinery Deployments are designed to provide."),
-75:("Services as stable network endpoints over changing Pod replicas, with label selectors connecting traffic to matching backends.", "A Service can exist perfectly while sending traffic nowhere if its selector matches zero Pods."),
-76:("Namespaces as a way to scope namespaced Kubernetes resources and apply deliberate organizational or policy boundaries.", "Namespaces are not a security boundary by themselves. RBAC, NetworkPolicy and admission controls determine what the boundary actually means."),
-77:("Externalizing non-sensitive configuration with ConfigMaps and consuming it through environment variables or mounted files.", "Environment-variable values do not update inside an existing process, and ConfigMaps mounted through `subPath` do not receive live file updates."),
-78:("Handling sensitive configuration with Kubernetes Secrets while separating storage format from actual protection.", "Base64 encoding is not encryption. RBAC, secret distribution, encryption at rest and workload access still decide how protected the value is."),
-79:("PersistentVolume, PersistentVolumeClaim and StorageClass working together so application data can outlive an individual Pod.", "A PVC is a request, not the storage itself. Dynamic provisioning depends on an appropriate StorageClass or a compatible pre-existing PV."),
-80:("Ingress as HTTP/HTTPS routing into Services, with an Ingress controller implementing the routing behavior.", "Creating an Ingress object does nothing useful if the cluster has no compatible Ingress controller actually watching it."),
-81:("Helm for packaging Kubernetes manifests into configurable, reusable releases.", "A chart is not merely templated YAML; release state and upgrade behavior are why Helm becomes operationally useful."),
-82:("A production-style Kubernetes flow combining Namespace, ConfigMap, Secret, Deployment, probes, Service, PVC, Ingress and Helm.", "Readiness decides whether a Pod should receive normal Service traffic; liveness answers a different question: whether the container should be restarted."),
-83:("CI/CD foundations: turning source changes into a repeatable path through validation, build and deployment rather than relying on manual release rituals.", "A pipeline should make failure visible and stop bad artifacts early. Automation that only makes mistakes faster has technically succeeded at the wrong objective.")
+SITE = {
+    "name": "Enthernet",
+    "title": "Enthernet Blog | Cloud, Security, Automation & Systems",
+    "description": "Engineering in public: cloud, cybersecurity, automation, Linux, networking, containers, Kubernetes and research backed by real technical work.",
+    "github": "https://github.com/Enthernetcode",
+    "portfolio": "https://Enthernetcode.github.io",
+    "linkedin": "https://www.linkedin.com/in/renuel-roberts-st-enthernet-code-6571a7241",
+    "email": "enthernet@enthernetservices.com",
 }
 
-SNIPPETS = {
-66:"""docker network create app-net\ndocker run -d --name db --network app-net postgres:17-alpine\ndocker run -d --name app --network app-net -p 8080:8000 myapp:1.0""",
-69:"""docker run --rm myapp:1.0 id\ndocker run --read-only myapp:1.0\ndocker run --cap-drop=ALL myapp:1.0""",
-74:"""kubectl apply -f deployment.yaml\nkubectl get deployments\nkubectl get rs\nkubectl get pods""",
-79:"""kubectl get storageclass\nkubectl get pvc\nkubectl get pv""",
-82:"""helm upgrade --install myapp ./chart\nkubectl get pods\nkubectl get svc\nkubectl get ingress""",
-83:"""source change\n  ↓\nvalidation / tests\n  ↓\nbuild artifact\n  ↓\ndeployment"""
+DAY_TITLES = {
+    1:("Topic pending archive verification","AWS Networking Foundations"),
+    2:("IAM Users & Least Privilege","AWS Networking Foundations"),
+    3:("Topic pending archive verification","AWS Networking Foundations"),
+    4:("Security Groups","AWS Networking Foundations"),
+    5:("Topic pending archive verification","AWS Networking Foundations"),
+    6:("Topic pending archive verification","AWS Networking Foundations"),
+    7:("Topic pending archive verification","AWS Networking Foundations"),
+    8:("Topic pending archive verification","AWS Networking Foundations"),
+    9:("Topic pending archive verification","AWS Networking Foundations"),
+    10:("Topic pending archive verification","AWS Networking Foundations"),
+    11:("VPC Endpoints","AWS Networking Foundations"),
+    12:("VPC Peering","AWS Networking Foundations"),
+    13:("AWS Transit Gateway","AWS Networking Foundations"),
+    14:("Topic pending archive verification","AWS Networking Foundations"),
+    15:("Topic pending archive verification","AWS Networking Foundations"),
+    16:("Auto Scaling","AWS Networking Foundations"),
+    17:("Topic pending archive verification","AWS Networking Foundations"),
+    18:("Topic pending archive verification","AWS Networking Foundations"),
+    19:("AWS Config","AWS Networking Foundations"),
+    20:("AWS Systems Manager","AWS Networking Foundations"),
+    21:("AWS CloudFormation","AWS Networking Foundations"),
+    22:("AWS CDK","AWS Networking Foundations"),
+    23:("Terraform Introduction","AWS Networking Foundations"),
+    24:("Introduction to Ansible","Infrastructure Automation"),
+    25:("First Ansible Playbook","Infrastructure Automation"),
+    26:("Ansible Variables","Infrastructure Automation"),
+    27:("Ansible Inventory","Infrastructure Automation"),
+    28:("Ansible Patterns","Infrastructure Automation"),
+    29:("Ansible Ad-Hoc Commands","Infrastructure Automation"),
+    30:("Ansible Modules","Infrastructure Automation"),
+    31:("Ansible Facts","Infrastructure Automation"),
+    32:("Ansible Roles","Infrastructure Automation"),
+    33:("host_vars, group_vars & register","Infrastructure Automation"),
+    34:("Conditionals in Ansible","Infrastructure Automation"),
+    35:("Jinja2 Templates","Infrastructure Automation"),
+    36:("Ansible Handlers","Infrastructure Automation"),
+    37:("Ansible Loops","Infrastructure Automation"),
+    38:("Blocks, Rescue & Always","Infrastructure Automation"),
+    39:("Ansible Galaxy Collections","Infrastructure Automation"),
+    40:("LAMP Automation Capstone","Infrastructure Automation"),
+    41:("Linux Filesystem","Linux Administration"),
+    42:("Linux Permissions","Linux Administration"),
+    43:("Users, Groups & sudo","Linux Administration"),
+    44:("Processes & Signals","Linux Administration"),
+    45:("systemd","Linux Administration"),
+    46:("journald","Linux Administration"),
+    47:("Cron vs systemd Timers","Linux Administration"),
+    48:("apt & dnf","Linux Administration"),
+    49:("SSH Deep Dive","Linux Administration"),
+    50:("Bash Scripting Automation","Linux Administration"),
+    51:("Linux Networking Tools","Linux Administration"),
+    52:("Linux Hardening","Linux Administration"),
+    53:("TCP vs UDP","Networking Deep Dive"),
+    54:("DNS & Cloud Security","Networking Deep Dive"),
+    55:("DHCP","Networking Deep Dive"),
+    56:("HTTP vs HTTPS","Networking Deep Dive"),
+    57:("TLS 1.3 Handshake","Networking Deep Dive"),
+    58:("Nginx Reverse Proxy","Networking Deep Dive"),
+    59:("Load Balancing Concepts","Networking Deep Dive"),
+    60:("Network Troubleshooting Sequence","Networking Deep Dive"),
+    61:("Why Containers","Docker"),
+    62:("Docker Architecture","Docker"),
+    63:("Docker Images","Docker"),
+    64:("Docker Container Lifecycle","Docker"),
+    65:("Docker Volumes","Docker"),
+    66:("Docker Networks","Docker"),
+    67:("Docker Compose","Docker"),
+    68:("Dockerfiles","Docker"),
+    69:("Container Security","Docker"),
+    70:("Multi-Container Deployment","Docker"),
+    71:("Kubernetes Architecture","Kubernetes"),
+    72:("Kubernetes Pods","Kubernetes"),
+    73:("Kubernetes ReplicaSets","Kubernetes"),
+    74:("Kubernetes Deployments","Kubernetes"),
+    75:("Kubernetes Services","Kubernetes"),
+    76:("Kubernetes Namespaces","Kubernetes"),
+    77:("Kubernetes ConfigMaps","Kubernetes"),
+    78:("Kubernetes Secrets","Kubernetes"),
+    79:("Kubernetes Persistent Storage","Kubernetes"),
+    80:("Kubernetes Ingress","Kubernetes"),
+    81:("Helm","Kubernetes"),
+    82:("Kubernetes Production Deployment","Kubernetes"),
+    83:("CI/CD Foundations","CI/CD & Observability"),
 }
 
-CSS = """*{box-sizing:border-box}body{margin:0;background:#07101a;color:#ecf4ff;font:16px/1.65 system-ui,-apple-system,Segoe UI,sans-serif}a{color:inherit;text-decoration:none}.wrap{width:min(1160px,calc(100% - 32px));margin:auto}header{position:sticky;top:0;background:#07101af2;border-bottom:1px solid #203048;z-index:5}nav{min-height:70px;display:flex;align-items:center;gap:20px}.brand{font-weight:900;letter-spacing:.12em;margin-right:auto}.hero{padding:90px 0 60px}.eyebrow,.tag{color:#6ee7ff;text-transform:uppercase;font-size:.75rem;font-weight:850;letter-spacing:.08em}.hero h1,.page h1{font-size:clamp(2.8rem,8vw,6.7rem);line-height:.95;letter-spacing:-.05em;margin:.2em 0}.hero p,.lead{max-width:800px;color:#a9b8cb;font-size:1.15rem}.btn{display:inline-block;padding:12px 17px;border:1px solid #30435f;border-radius:12px;margin:12px 8px 0 0;font-weight:800}.primary{background:#eef6ff;color:#07101a}.external{border-color:#50d8a7}.section{padding:60px 0;border-top:1px solid #142337}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.card{border:1px solid #203048;background:#0b1623;border-radius:18px;padding:22px}.card h3{margin:.4em 0}.card p,.muted{color:#9fb0c5}.progress{height:11px;background:#17263a;border-radius:99px;overflow:hidden}.progress i{display:block;width:83%;height:100%;background:#6ee7ff}.carousel{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(290px,34%);overflow:auto;gap:16px;padding-bottom:12px}.day{min-height:260px;display:flex;flex-direction:column}.go{margin-top:auto;color:#6ee7ff;font-weight:850}.page{padding:70px 0}.article{max-width:850px}.article h2{margin-top:42px}.notice,.field{border:1px solid #314761;background:#0b1623;padding:18px;border-radius:14px;color:#c4d0df}.field{border-left:4px solid #6ee7ff}.search{width:100%;padding:13px 15px;background:#09131f;border:1px solid #263b56;border-radius:12px;color:white;margin:20px 0}.footer{padding:50px 0;border-top:1px solid #203048;color:#8192a8}pre{overflow:auto;padding:18px;border:1px solid #203048;border-radius:14px;background:#050b12;color:#dcecff}.pill{display:inline-block;padding:4px 9px;border:1px solid #2b415d;border-radius:999px;margin:0 6px 6px 0;color:#a9b8cb;font-size:.85rem}.project-hero{display:grid;grid-template-columns:1.5fr 1fr;gap:20px}.stack{display:flex;flex-wrap:wrap;gap:8px}@media(max-width:800px){nav a:not(.brand){display:none}.grid,.project-hero{grid-template-columns:1fr}.carousel{grid-auto-columns:88%}.hero{padding-top:55px}}"""
+DAY_CONTENT = {}
+for source in (AWS_DAYS, ANSIBLE_DAYS, LINUX_NETWORKING_DAYS, DOCKER_DAYS, KUBERNETES_DAYS, CICD_DAYS):
+    DAY_CONTENT.update(source)
 
-JS = """const q=document.querySelector('#q');if(q)q.oninput=()=>{let v=q.value.toLowerCase();document.querySelectorAll('[data-search]').forEach(x=>x.style.display=x.dataset.search.includes(v)?'':'none')}"""
+FUTURE = {
+    84:"GitHub Actions", 85:"Pipeline Secrets", 86:"Automated Testing & Deploy",
+    87:"Prometheus", 88:"Grafana", 89:"Centralized Logging", 90:"Monitoring Dashboard",
+    91:"Shared Responsibility", 92:"IAM Best Practices", 93:"Secrets Management",
+    94:"GuardDuty & Security Hub", 95:"Incident Response", 96:"Infrastructure Hardening",
+    97:"DevSecOps Integration", 98:"Production Three-Tier Infrastructure",
+    99:"End-to-End Deploy, Monitoring & Security Review", 100:"Showcase + Lessons Learned"
+}
 
-def slug(s):
-    return re.sub(r"[^a-z0-9]+","-",s.lower()).strip("-")
+PHASES = [
+    ("AWS Networking Foundations", "Days 1–23", "Identity, VPC connectivity, scaling and infrastructure-as-code foundations."),
+    ("Infrastructure Automation", "Days 24–40", "Ansible from first playbooks through failure handling, collections and the LAMP capstone."),
+    ("Linux Administration", "Days 41–52", "Filesystem, permissions, identity, processes, services, logs, scheduling, packages and hardening."),
+    ("Networking Deep Dive", "Days 53–60", "Transport, DNS, DHCP, HTTP/TLS, reverse proxies, load balancing and layered troubleshooting."),
+    ("Docker", "Days 61–70", "Images, containers, storage, networking, Compose, Dockerfiles, security and a multi-container capstone."),
+    ("Kubernetes", "Days 71–82", "Control plane, workload controllers, Services, configuration, storage, ingress, Helm and production deployment."),
+    ("CI/CD & Observability", "Days 83–90", "Delivery pipelines followed by metrics, dashboards and centralized logging."),
+    ("Cloud Security & DevSecOps", "Days 91–97", "Cloud responsibility, identity, secrets, detection, incident response and infrastructure hardening."),
+    ("Capstone", "Days 98–100", "Integrated infrastructure, delivery, monitoring and security evidence."),
+]
 
-def href(d):
-    return f"/100-days/day-{d:03d}-{slug(DAYS[d][0])}/"
+PROJECTS = [
+    {
+        "slug":"core-shield", "name":"Core-Shield Cyber Labs", "kicker":"Cybersecurity Education Platform",
+        "summary":"A hands-on cybersecurity learning platform built around Concept over Syntax and Logic over Code.",
+        "live":"https://core-shield.enthernetservice.com",
+        "details":[
+            "Browser-based playground for Python, Node.js, Bash and PHP labs with bounded execution.",
+            "Course areas spanning Linux, reverse proxies, Ansible, web scraping and Wi-Fi security.",
+            "AI mentor, dashboards and certificate flows designed around understanding rather than button memorization.",
+            "Isolation, resource ceilings and untrusted-code execution are product requirements, not optional hardening."
+        ]
+    },
+    {
+        "slug":"pinch-ai", "name":"Enthernet Pinch AI", "kicker":"Research Discovery & Evidence",
+        "summary":"A research assistant that discovers scholarly sources while preserving metadata and provenance for verification.",
+        "live":"https://pinchai.enthernetservice.com",
+        "details":[
+            "OpenAlex, Crossref and Semantic Scholar integrations.",
+            "Normalized source model for DOI, journal, author and open-access metadata.",
+            "429/rate-limit handling and polite provider request behavior.",
+            "Raw metadata retention and an audit trail so citation-shaped text is not treated as evidence by appearance alone."
+        ]
+    },
+    {
+        "slug":"jhc-media", "name":"JHC Media", "kicker":"Live Media Systems Engineering",
+        "summary":"A low-strain church production engine concept built around deterministic clocks, GPU paths and explicit backpressure.",
+        "live":None,
+        "details":[
+            "Audio capture clock selected as the Phase 0 master clock.",
+            "Preview and Program remain separate operator states.",
+            "Zero-copy camera-to-encoder path is a measured Phase 0 requirement, not an assumption.",
+            "Backpressure policy must state what gets dropped and who is informed when encoding falls behind."
+        ]
+    },
+    {
+        "slug":"automation-systems", "name":"Automation Systems", "kicker":"Queues, Mail & Infrastructure",
+        "summary":"Production automation work around mail aggregation, task queues, browser automation and Linux service operations.",
+        "live":SITE["github"],
+        "details":[
+            "Python services with Redis/Celery background workers.",
+            "IMAP/SMTP integration, scheduling and failure handling.",
+            "Nginx reverse proxy and resource-constrained VPS operations.",
+            "Operational focus on retries, idempotence, credentials, queue visibility and recoverability."
+        ]
+    },
+]
 
-def layout(title, body, description="Cloud, security, automation and systems engineering documented in public."):
-    return f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{escape(title)} | Enthernet</title><meta name="description" content="{escape(description)}"><link rel="canonical" href="{BASE}"><style>{CSS}</style></head><body><header><nav class="wrap"><a class="brand" href="/">ENTHERNET</a><a href="/100-days/">100 Days</a><a href="/projects/">Projects</a><a href="/articles/">Notes</a><a href="/research/">Research</a><a href="/about/">About</a><a href="/contact/">Contact</a></nav></header>{body}<footer class="footer"><div class="wrap">ENTHERNET · Build it. Verify it. Document the evidence.</div></footer><script>{JS}</script></body></html>"""
+RESEARCH = {
+    "title":"Full Cell Sufficiency",
+    "summary":"An evidence-tracked framework exploring wound healing, cell signaling, mitosis, tissue remodeling, resource sufficiency and controlled regeneration.",
+    "live":"https://fcs.enthernet.com",
+    "levels":["Established evidence","Supported inference","Hypothesis","Speculation","Open question"],
+    "areas":["Wound healing","Cell signaling","Mitosis","Tissue remodeling","Resource sufficiency","Controlled regeneration"]
+}
 
-def write(path, html):
-    p = OUT / path
-    if p.suffix:
-        p.parent.mkdir(parents=True, exist_ok=True)
+CSS = r'''
+:root{--bg:#060b12;--bg2:#0a111c;--panel:#0d1724;--panel2:#101d2d;--line:#203149;--text:#f5f8ff;--muted:#94a7bd;--cyan:#6ee7ff;--purple:#a798ff;--green:#65e5aa;--yellow:#ffd56a;--danger:#ff8d8d;--max:1180px;--radius:22px}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(circle at 85% 5%,rgba(110,231,255,.09),transparent 27%),radial-gradient(circle at 5% 35%,rgba(167,152,255,.07),transparent 24%),var(--bg);color:var(--text);font:16px/1.68 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}a{color:inherit;text-decoration:none}.shell{width:min(var(--max),calc(100% - 38px));margin:auto}.site-header{position:sticky;top:0;z-index:50;background:rgba(6,11,18,.88);backdrop-filter:blur(15px);border-bottom:1px solid var(--line)}.nav{height:70px;display:flex;align-items:center;gap:22px}.brand{font-weight:900;letter-spacing:.13em;margin-right:auto}.nav a:not(.brand){font-size:.92rem;color:#c7d2e2}.nav a:hover,.text-link:hover{color:var(--cyan)}.hero{padding:88px 0 68px}.hero-grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(280px,.55fr);gap:36px;align-items:end}.eyebrow,.kicker{color:var(--cyan);text-transform:uppercase;letter-spacing:.1em;font-size:.74rem;font-weight:850}.hero h1,.page-hero h1,.article h1{font-size:clamp(3rem,7.8vw,6.7rem);line-height:.94;letter-spacing:-.055em;margin:.22em 0}.hero-copy,.lead{color:#afbdd0;font-size:1.12rem;max-width:810px}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}.btn{display:inline-flex;align-items:center;justify-content:center;padding:12px 17px;border:1px solid #314863;border-radius:12px;font-weight:800}.btn-primary{background:#edf6ff;color:#07101a}.btn-secondary:hover{border-color:var(--cyan)}.stats{display:grid;gap:12px}.stat,.panel,.card,.phase-card,.archive-item,.callout,.status-box{border:1px solid var(--line);background:linear-gradient(145deg,var(--panel),#0a1320);border-radius:var(--radius)}.stat{padding:20px}.stat strong{display:block;font-size:1.45rem}.stat span{color:var(--muted)}.section{padding:64px 0;border-top:1px solid #122034}.alt{background:rgba(13,23,36,.34)}.section-head{display:flex;justify-content:space-between;align-items:end;gap:22px;margin-bottom:25px}.section-head h2{font-size:clamp(2rem,4.4vw,3.8rem);line-height:1.02;letter-spacing:-.04em;margin:.2em 0}.section-head p{color:var(--muted);max-width:720px}.progress{height:12px;background:#15253a;border-radius:99px;overflow:hidden;margin:14px 0}.progress i{display:block;width:83%;height:100%;background:linear-gradient(90deg,var(--cyan),var(--green))}.grid-2,.grid-3{display:grid;gap:16px}.grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid-3{grid-template-columns:repeat(3,minmax(0,1fr))}.card,.phase-card,.archive-item{padding:22px}.card h3,.phase-card h3,.archive-item h3{margin:.35em 0;font-size:1.35rem}.card p,.phase-card p,.archive-item p{color:var(--muted)}.carousel{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(300px,34%);gap:16px;overflow:auto;padding:4px 0 14px;scroll-snap-type:x mandatory}.carousel .card{scroll-snap-align:start;min-height:290px;display:flex;flex-direction:column}.card .text-link{margin-top:auto}.text-link{color:var(--cyan);font-weight:850}.tag-row{display:flex;flex-wrap:wrap;gap:7px}.tag,.status{display:inline-block;padding:5px 9px;border:1px solid #2d435e;border-radius:999px;color:#b7c6d8;font-size:.76rem}.status{color:var(--green);border-color:rgba(101,229,170,.35)}.status.warn{color:var(--yellow);border-color:rgba(255,213,106,.42)}.page-hero{padding:70px 0 45px}.page-hero h1{max-width:1000px}.search{width:100%;padding:14px 16px;color:white;background:#08111d;border:1px solid #263b56;border-radius:13px;margin:15px 0 24px}.archive-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}.archive-item:hover{border-color:#3b607c;transform:translateY(-1px)}.article-layout{display:grid;grid-template-columns:minmax(0,820px) minmax(220px,1fr);gap:56px;align-items:start}.article{padding:60px 0 80px}.article h1{font-size:clamp(2.8rem,6vw,5.8rem)}.article h2{font-size:1.65rem;margin:44px 0 12px}.article p{color:#c2ccda}.article pre{overflow:auto;background:#03070d;border:1px solid #21334c;border-radius:15px;padding:18px;color:#dcecff;font:14px/1.62 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre-wrap}.callout,.status-box{padding:18px}.callout{border-left:4px solid var(--cyan);color:#d5dfeb}.status-box.warn{border-color:rgba(255,213,106,.45);background:rgba(255,213,106,.05)}.status-box strong{color:var(--yellow)}.toc{position:sticky;top:98px;border-left:1px solid var(--line);padding-left:22px;color:var(--muted);font-size:.88rem}.toc strong{color:white;display:block;margin-bottom:9px}.toc a{display:block;padding:5px 0}.toc a:hover{color:var(--cyan)}.prev-next{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:55px}.prev-next a{border:1px solid var(--line);padding:17px;border-radius:15px}.prev-next a:last-child{text-align:right}.project-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.project-card{padding:25px;border:1px solid var(--line);background:var(--panel);border-radius:var(--radius)}.project-card h3{font-size:1.55rem;margin:.35em 0}.project-card p,.project-card li{color:var(--muted)}.project-card .actions{margin-top:16px}.research-levels{display:flex;flex-wrap:wrap;gap:7px;margin:18px 0}.footer{padding:48px 0;border-top:1px solid var(--line);color:#8193aa}.footer-grid{display:flex;gap:18px;justify-content:space-between;align-items:center}.footer a{color:#aab8c9}.phase-label{color:var(--purple);font-weight:800}.evidence-note{font-size:.9rem;color:#899bb1;border-top:1px solid var(--line);margin-top:36px;padding-top:18px}.empty-art{border:1px dashed #344b65;border-radius:18px;padding:22px;color:#8396ad;margin:24px 0;background:rgba(255,255,255,.015)}
+@media(max-width:900px){.hero-grid,.article-layout{grid-template-columns:1fr}.toc{position:static;border-left:0;border-top:1px solid var(--line);padding:20px 0 0}.archive-grid,.grid-3{grid-template-columns:repeat(2,minmax(0,1fr))}.carousel{grid-auto-columns:72%}}
+@media(max-width:650px){.shell{width:min(var(--max),calc(100% - 30px))}.nav a:not(.brand){display:none}.hero{padding:55px 0 48px}.grid-2,.grid-3,.archive-grid,.project-grid{grid-template-columns:1fr}.carousel{grid-auto-columns:88%}.section{padding:50px 0}.article{padding-top:38px}.prev-next{grid-template-columns:1fr}.prev-next a:last-child{text-align:left}.footer-grid{align-items:flex-start;flex-direction:column}}
+'''
+
+JS = r'''
+const q=document.querySelector('[data-search-input]');
+if(q){q.addEventListener('input',()=>{const v=q.value.trim().toLowerCase();document.querySelectorAll('[data-search]').forEach(el=>{el.hidden=v && !el.dataset.search.includes(v);});});}
+'''
+
+(ASSETS / "styles.css").write_text(CSS, encoding="utf-8")
+(ASSETS / "site.js").write_text(JS, encoding="utf-8")
+
+
+def slugify(value):
+    return re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
+
+
+def day_href(day):
+    title = DAY_TITLES[day][0]
+    return f"/100-days/day-{day:03d}-{slugify(title)}/"
+
+
+def page_url(path="/"):
+    return BASE + ("/" if path == "/" else path)
+
+
+def nav():
+    return f'''<header class="site-header"><nav class="shell nav"><a class="brand" href="/">ENTHERNET</a><a href="/100-days/">100 Days</a><a href="/projects/">Projects</a><a href="/articles/">Notes</a><a href="/research/">Research</a><a href="/about/">About</a><a href="/contact/">Contact</a></nav></header>'''
+
+
+def footer():
+    return f'''<footer class="footer"><div class="shell footer-grid"><span>ENTHERNET · Build it. Verify it. Document the evidence.</span><span><a href="{SITE['github']}">GitHub ↗</a> · <a href="{SITE['linkedin']}">LinkedIn ↗</a></span></div></footer>'''
+
+
+def layout(title, description, body, canonical="/", article_schema=None):
+    schema = f'<script type="application/ld+json">{json.dumps(article_schema)}</script>' if article_schema else ""
+    return f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{escape(title)}</title><meta name="description" content="{escape(description)}"><link rel="canonical" href="{page_url(canonical)}"><meta property="og:title" content="{escape(title)}"><meta property="og:description" content="{escape(description)}"><meta property="og:url" content="{page_url(canonical)}"><meta property="og:type" content="{'article' if article_schema else 'website'}"><meta name="theme-color" content="#060b12"><link rel="stylesheet" href="/assets/styles.css">{schema}</head><body>{nav()}<main>{body}</main>{footer()}<script src="/assets/site.js" defer></script></body></html>'''
+
+
+def write(relpath, content):
+    path = DIST / relpath
+    if path.suffix:
+        path.parent.mkdir(parents=True, exist_ok=True)
     else:
-        p.mkdir(parents=True, exist_ok=True)
-        p = p / "index.html"
-    p.write_text(html, encoding="utf-8")
+        path.mkdir(parents=True, exist_ok=True)
+        path = path / "index.html"
+    path.write_text(content, encoding="utf-8")
 
-def generic_detail(title, phase):
-    if phase == "AWS Networking Foundations":
-        return (f"This day focused on {title} as part of building a practical AWS foundation around identity, networking, scaling and infrastructure control.", "The useful question is not only what the AWS feature does, but which trust or traffic boundary it changes.")
-    if phase == "Infrastructure Automation":
-        return (f"This day focused on {title} and how Ansible turns host configuration into repeatable, reviewable automation.", "Idempotence matters: a playbook should converge systems toward the desired state rather than blindly repeat side effects.")
-    if phase == "Linux Administration":
-        return (f"This day focused on {title} as part of operating Linux systems with enough visibility and control to troubleshoot and secure them.", "Administration and security meet at ownership: know which process, user, file and service is responsible before changing it.")
-    if phase == "Networking Deep Dive":
-        return (f"This day focused on {title} and the network behavior that has to be understood before higher-level cloud or application troubleshooting makes sense.", "Debug from lower layers upward. Application symptoms often begin with DNS, routing or transport failures.")
-    return (f"This day focused on {title}.", "The durable record is built around understanding behavior, verifying it and recording the failure modes.")
 
-latest = "".join(
-    f'<article class="card day"><span class="tag">Day {d} · {escape(DAYS[d][1])}</span><h3>{escape(DAYS[d][0])}</h3><p>{"Exact topic still requires original archive evidence." if d in UNCERTAIN else DETAILS.get(d,generic_detail(*DAYS[d]))[0]}</p><a class="go" href="{href(d)}">Read Day {d} →</a></article>'
-    for d in range(83,73,-1)
+def status_label(day):
+    if day in UNVERIFIED_AWS:
+        return '<span class="status warn">Exact topic unverified</span>'
+    status = DAY_CONTENT.get(day, {}).get("status", "published")
+    labels = {
+        "published-artifact":"Published artifact recovered",
+        "topic-verified":"Topic verified",
+        "published-after-ledger":"Published after ledger snapshot",
+        "published":"Published journey entry",
+    }
+    return f'<span class="status">{escape(labels.get(status, status))}</span>'
+
+
+def summary_for(day):
+    if day in DAY_CONTENT:
+        return DAY_CONTENT[day]["summary"]
+    return UNVERIFIED_AWS.get(day, "Published chronology confirmed; exact historical topic still requires artifact evidence.")
+
+
+def day_card(day):
+    title, phase = DAY_TITLES[day]
+    return f'''<article class="card"><div class="tag-row"><span class="tag">DAY {day:02d}</span><span class="tag">{escape(phase)}</span></div><h3>{escape(title)}</h3><p>{escape(summary_for(day))}</p><a class="text-link" href="{day_href(day)}">Read Day {day} →</a></article>'''
+
+
+# Homepage
+latest = "".join(day_card(day) for day in range(83, 73, -1))
+project_cards = "".join(
+    f'''<article class="project-card"><span class="kicker">{escape(p['kicker'])}</span><h3>{escape(p['name'])}</h3><p>{escape(p['summary'])}</p><div class="actions"><a class="text-link" href="/projects/{p['slug']}/">Case study →</a>{f'<a class="btn btn-secondary" href="{p["live"]}">Live / source ↗</a>' if p['live'] else ''}</div></article>'''
+    for p in PROJECTS
 )
 
-home = f"""<main><section class="hero"><div class="wrap"><span class="eyebrow">Day 83 / 100 · public engineering journal</span><h1>Cloud. Security. Automation. Evidence.</h1><p>This is the permanent home for my #100DaysOfCloudAndSecurity journey, engineering notes, projects and research. LinkedIn carries the condensed story; this site keeps the durable technical record.</p><a class="btn primary" href="/100-days/">Explore the journey</a><a class="btn" href="https://github.com/Enthernetcode">GitHub ↗</a></div></section>
-<section class="section"><div class="wrap"><span class="eyebrow">Progress</span><h2>83 of 100 days</h2><div class="progress"><i></i></div><p class="muted">Current phase: CI/CD & Observability.</p></div></section>
-<section class="section"><div class="wrap"><span class="eyebrow">Latest entries</span><h2>One day, one permanent route.</h2><div class="carousel">{latest}</div></div></section>
-<section class="section"><div class="wrap"><span class="eyebrow">Live work</span><h2>Projects and research already on the web.</h2><div class="grid">
-<article class="card"><h3>Core-Shield Cyber Labs</h3><p>Cybersecurity learning platform built around concept over syntax, browser labs and hands-on practice.</p><a class="go" href="/projects/core-shield/">Project record →</a><br><a class="btn external" href="https://core-shield.enthernetservice.com">Visit live site ↗</a></article>
-<article class="card"><h3>Enthernet Pinch AI</h3><p>Research discovery and evidence-tracking assistant built around scholarly sources and auditable metadata.</p><a class="go" href="/projects/pinch-ai/">Project record →</a><br><a class="btn external" href="https://pinchai.enthernetservice.com">Visit live site ↗</a></article>
-<article class="card"><h3>Full Cell Sufficiency</h3><p>Research framework exploring resource sufficiency, signalling, wound repair, tissue remodeling and controlled regeneration.</p><a class="go" href="/research/full-cell-sufficiency/">Research record →</a><br><a class="btn external" href="https://fcs.enthernet.com">Visit live site ↗</a></article>
-</div></div></section></main>"""
-write("index.html", layout("Engineering in Public", home))
+home = f'''<section class="hero"><div class="shell hero-grid"><div><span class="eyebrow">Day 83 / 100 · Engineering in public</span><h1>Cloud. Security. Automation. Evidence.</h1><p class="hero-copy">A technical notebook, project archive and public engineering record. The short social post tells the story; this site keeps the implementation, failure modes, verification and field knowledge.</p><div class="actions"><a class="btn btn-primary" href="/100-days/">Explore the journey →</a><a class="btn btn-secondary" href="{SITE['github']}">View GitHub ↗</a></div></div><div class="stats"><div class="stat"><strong>83 / 100</strong><span>Journey progress</span></div><div class="stat"><strong>CI/CD</strong><span>Current published phase</span></div><div class="stat"><strong>Evidence first</strong><span>Artifacts outrank reconstruction</span></div></div></div></section>
+<section class="section alt"><div class="shell"><div class="section-head"><div><span class="eyebrow">Mission</span><h2>Evidence beats résumé fog.</h2><p>Learn by building, preserve the failures, verify the behavior and leave enough detail for another engineer to reproduce the reasoning.</p></div></div><div class="grid-3"><div class="panel card"><h3>Understand the internals</h3><p>Frameworks are useful. Understanding how requests move, how services fail and where trust changes is more durable.</p></div><div class="panel card"><h3>Security is architecture</h3><p>Identity, network boundaries, secret handling and privilege are design decisions from the beginning, not a final checkbox.</p></div><div class="panel card"><h3>Automation is leverage</h3><p>Repetitive workflows become systems, but only when failure semantics and verification are encoded too.</p></div></div></div></section>
+<section class="section"><div class="shell"><div class="section-head"><div><span class="eyebrow">#100DaysOfCloudAndSecurity</span><h2>83 published days in one navigable record.</h2></div><a class="text-link" href="/100-days/">View full archive →</a></div><div class="progress"><i></i></div><p class="lead">The archive now uses phase-specific writeups recovered from the project record. Twelve early AWS topics remain visibly unresolved rather than being upgraded from guesses to fake history.</p><div class="carousel">{latest}</div></div></section>
+<section class="section alt"><div class="shell"><div class="section-head"><div><span class="eyebrow">Live projects</span><h2>The work should lead somewhere real.</h2><p>Project cards link to case studies and, where deployed, the running systems themselves.</p></div></div><div class="project-grid">{project_cards}</div></div></section>
+<section class="section"><div class="shell"><div class="grid-2"><div><span class="eyebrow">Research notebook</span><h2 style="font-size:clamp(2.3rem,5vw,4.4rem);line-height:1.02">Full Cell Sufficiency</h2><p class="hero-copy">{escape(RESEARCH['summary'])}</p><div class="research-levels">{''.join(f'<span class="tag">{escape(x)}</span>' for x in RESEARCH['levels'])}</div><div class="actions"><a class="btn btn-primary" href="/research/full-cell-sufficiency/">Research record</a><a class="btn btn-secondary" href="{RESEARCH['live']}">Live FCS site ↗</a></div></div><div class="panel card"><h3>Evidence stays labeled</h3><p>Established biology, supported inference, hypothesis and speculation are deliberately kept separate so an interesting mechanism does not quietly become an established claim.</p><ul>{''.join(f'<li>{escape(x)}</li>' for x in RESEARCH['areas'])}</ul></div></div></div></section>'''
+write("index.html", layout(SITE["title"], SITE["description"], home, "/"))
 
-cards = "".join(
-    f'<article class="card" data-search="day {d} {escape(t.lower())} {escape(p.lower())}"><span class="tag">Day {d} · {escape(p)}</span><h3>{escape(t)}</h3><p>{"Topic verification pending from original artifact evidence." if d in UNCERTAIN else DETAILS.get(d,generic_detail(t,p))[0]}</p><a class="go" href="{href(d)}">Open →</a></article>'
-    for d,(t,p) in DAYS.items()
-)
-future = "".join(f'<article class="card"><span class="tag">Planned · Day {d}</span><h3>{escape(t)}</h3><p>Roadmap entry. Not published yet.</p></article>' for d,t in FUTURE.items())
-archive = f"""<main class="page"><div class="wrap"><span class="eyebrow">#100DaysOfCloudAndSecurity</span><h1>83 days. One evidence trail.</h1><p class="lead">Every Day 1–83 route is present. Verified topics now carry topic-specific technical summaries. Twelve early AWS rows remain explicitly unresolved until original artifact evidence closes them.</p><input id="q" class="search" placeholder="Search day, topic or phase"><div class="grid">{cards}</div><section class="section"><h2>Roadmap ahead: Days 84–100</h2><div class="grid">{future}</div></section></div></main>"""
-write("100-days", layout("100 Days of Cloud & Security", archive))
 
-for d,(title,phase) in DAYS.items():
-    if d in UNCERTAIN:
-        record = f"""<div class="notice"><strong>Evidence warning:</strong> this day exists in the published chronology, but the exact topic has not yet been proven by an original post, screenshot, video frame or repository artifact.</div><h2>What closes this gap</h2><p>Recover the original Day {d} artifact. Once verified, this permanent route can be expanded without inventing history.</p>"""
+# Journey archive
+phase_cards = "".join(f'<article class="phase-card"><span class="phase-label">{escape(days)}</span><h3>{escape(name)}</h3><p>{escape(desc)}</p></article>' for name,days,desc in PHASES)
+archive_cards = []
+for day in range(83, 0, -1):
+    title, phase = DAY_TITLES[day]
+    s = summary_for(day)
+    archive_cards.append(f'''<a class="archive-item" data-search="day {day} {escape(title.lower())} {escape(phase.lower())} {escape(s.lower())}" href="{day_href(day)}"><div class="tag-row"><span class="tag">DAY {day:02d}</span>{status_label(day)}</div><h3>{escape(title)}</h3><span class="phase-label">{escape(phase)}</span><p>{escape(s)}</p></a>''')
+future_cards = "".join(f'<article class="card"><span class="tag">PLANNED · DAY {day}</span><h3>{escape(title)}</h3><p>Roadmap entry only. It will not be presented as published work until artifact evidence exists.</p></article>' for day,title in FUTURE.items())
+archive = f'''<section class="page-hero"><div class="shell"><span class="eyebrow">#100DaysOfCloudAndSecurity</span><h1>100 days. One evidence trail.</h1><p class="lead">Days 1–83 are represented in chronological order. Confirmed topics carry expanded engineering records; unresolved historical topics stay unresolved until published evidence closes them.</p></div></section><section class="section"><div class="shell"><div class="progress"><i></i></div><p class="lead"><strong>83 of 100 days</strong> · current published phase: CI/CD & Observability.</p></div></section><section class="section alt"><div class="shell"><div class="section-head"><div><span class="eyebrow">Journey phases</span><h2>From cloud foundations to integrated capstones.</h2></div></div><div class="grid-3">{phase_cards}</div></div></section><section class="section"><div class="shell"><div class="section-head"><div><span class="eyebrow">Archive</span><h2>Search the days.</h2><p>Search by day number, phase or technical topic.</p></div></div><input class="search" data-search-input placeholder="Search days, topics, phases…" aria-label="Search journey"><div class="archive-grid">{''.join(archive_cards)}</div></div></section><section class="section alt"><div class="shell"><div class="section-head"><div><span class="eyebrow">Roadmap ahead</span><h2>Days 84–100</h2><p>Planned material is visually separate from published evidence.</p></div></div><div class="grid-3">{future_cards}</div></div></section>'''
+write("100-days", layout("100 Days of Cloud & Security | Enthernet", "The permanent evidence-backed archive for #100DaysOfCloudAndSecurity.", archive, "/100-days/"))
+
+
+# Individual day pages
+for day in range(1, 84):
+    title, phase = DAY_TITLES[day]
+    prev_link = f'<a href="{day_href(day-1)}">← Day {day-1}<br><strong>{escape(DAY_TITLES[day-1][0])}</strong></a>' if day > 1 else '<a href="/100-days/">← Archive<br><strong>All days</strong></a>'
+    next_link = f'<a href="{day_href(day+1)}">Day {day+1} →<br><strong>{escape(DAY_TITLES[day+1][0])}</strong></a>' if day < 83 else '<a href="/100-days/">Roadmap →<br><strong>Days 84–100</strong></a>'
+
+    if day in UNVERIFIED_AWS:
+        reason = UNVERIFIED_AWS[day]
+        sections = f'''<div class="status-box warn"><strong>Historical evidence still required.</strong><p>{escape(reason)}</p><p>The canonical ledger confirms that Day {day} was published, but it does not contain artifact evidence for the exact topic. The blog will not promote a likely topic into a fact merely to make the archive look complete.</p></div><h2 id="close-gap">What closes this gap</h2><p>An original LinkedIn post paste, screenshot, video frame or repository artifact that proves the exact Day {day} topic. Once recovered, the article can be expanded while this page keeps the historical warning as part of the correction record.</p><div class="empty-art"><strong>Pic of the Day:</strong> deliberately not generated yet. The visual will be created only after the exact topic is verified.</div>'''
+        description = f"Day {day} of #100DaysOfCloudAndSecurity. Exact topic pending archive verification."
     else:
-        summary, field = DETAILS.get(d, generic_detail(title, phase))
-        snippet = f"<h2>Hands-on reference</h2><pre>{escape(SNIPPETS[d])}</pre>" if d in SNIPPETS else ""
-        record = f"""<p class="lead">{escape(summary)}</p><h2>What this day covered</h2><p>{escape(summary)}</p><div class="field"><strong>Field note:</strong> {escape(field)}</div>{snippet}<h2>Verification mindset</h2><p>The point of the day is not command memorisation. The useful evidence is being able to explain the resource or mechanism, predict its behavior, verify the result and recognize the failure mode when the system disagrees.</p><h2>Archive status</h2><p>This page preserves the verified day/topic mapping and adds a durable technical summary. Original screenshots, repository links and exact published text can be attached as they are recovered without changing this URL.</p>"""
-    prev = f'<a class="btn" href="{href(d-1)}">← Day {d-1}</a>' if d > 1 else '<a class="btn" href="/100-days/">← Archive</a>'
-    nxt = f'<a class="btn" href="{href(d+1)}">Day {d+1} →</a>' if d < 83 else '<a class="btn" href="/100-days/">Roadmap →</a>'
-    body = f"""<main class="page"><div class="wrap article"><span class="eyebrow">Day {d} of 100 · {escape(phase)}</span><h1>{escape(title)}</h1>{record}<p>{prev}{nxt}</p></div></main>"""
-    write(href(d).strip("/"), layout(f"Day {d}: {title}", body, f"Day {d} of #100DaysOfCloudAndSecurity: {title}."))
+        data = DAY_CONTENT[day]
+        how_html = "".join(f"<p>{escape(p)}</p>" for p in data["how"])
+        command_html = f'<h2 id="hands-on">Hands-on reference</h2><pre>{escape(data["commands"])}</pre>' if data.get("commands") else ""
+        sections = f'''<p class="lead">{escape(data['summary'])}</p><h2 id="architecture">Architecture / mental model</h2><pre>{escape(data['architecture'])}</pre><h2 id="how">How it works</h2>{how_html}{command_html}<h2 id="verify">Verification</h2><p>{escape(data['verify'])}</p><h2 id="gotcha">Field note / gotcha</h2><div class="callout">{escape(data['gotcha'])}</div><h2 id="security">Security considerations</h2><p>{escape(data['security'])}</p><h2 id="learned">What I learned</h2><p>{escape(data['lesson'])}</p><div class="empty-art"><strong>Pic of the Day:</strong> queued for the visual pass after the written archive is complete. No image is being generated ahead of the article.</div><p class="evidence-note"><strong>Evidence note:</strong> {escape(data['evidence'])} The blog expands the technical explanation; it does not claim every paragraph is verbatim from the original social post.</p>'''
+        description = data["summary"]
 
-projects = """<main class="page"><div class="wrap"><span class="eyebrow">Projects</span><h1>Systems, not technology bingo cards.</h1><p class="lead">These are working systems with live destinations, architecture decisions and technical lessons behind them.</p><div class="grid">
-<article class="card"><h3>Core-Shield Cyber Labs</h3><p>Cybersecurity learning platform with browser labs, AI guidance, certificates and hands-on playground execution.</p><a class="go" href="/projects/core-shield/">Read project record →</a><br><a class="btn external" href="https://core-shield.enthernetservice.com">Live site ↗</a></article>
-<article class="card"><h3>Enthernet Pinch AI</h3><p>Research assistant that discovers scholarly sources, normalizes metadata and preserves an audit trail.</p><a class="go" href="/projects/pinch-ai/">Read project record →</a><br><a class="btn external" href="https://pinchai.enthernetservice.com">Live site ↗</a></article>
-<article class="card"><h3>JHC Media</h3><p>Live media engine design focused on deterministic clocks, GPU video paths and predictable behavior under load.</p><a class="go" href="/projects/jhc-media/">Read project record →</a></article>
-<article class="card"><h3>Automation Systems</h3><p>Mail, task queues, browser automation, infrastructure scripting and operational workflow projects.</p><a class="go" href="/projects/automation-systems/">Read project record →</a></article>
-</div></div></main>"""
-write("projects", layout("Projects", projects))
+    schema = {"@context":"https://schema.org","@type":"Article","headline":title,"description":description,"mainEntityOfPage":page_url(day_href(day)),"author":{"@type":"Person","name":"Enthernet"}}
+    body = f'''<section><div class="shell article-layout"><article class="article"><span class="eyebrow">Day {day:02d} of 100 · {escape(phase)}</span><h1>{escape(title)}</h1><div class="tag-row"><span class="tag">#100DaysOfCloudAndSecurity</span><span class="tag">{escape(phase)}</span>{status_label(day)}</div>{sections}<div class="prev-next">{prev_link}{next_link}</div></article><aside class="toc"><strong>On this page</strong><a href="#architecture">Architecture</a><a href="#how">How it works</a><a href="#hands-on">Hands-on</a><a href="#verify">Verification</a><a href="#gotcha">Field note</a><a href="#security">Security</a><a href="#learned">What I learned</a><hr style="border:0;border-top:1px solid var(--line);margin:17px 0"><a href="/100-days/">← Journey archive</a></aside></div></section>'''
+    write(day_href(day).strip("/"), layout(f"Day {day}: {title} | Enthernet", description, body, day_href(day), schema))
 
-core = """<main class="page"><div class="wrap article"><span class="eyebrow">Project · Live</span><h1>Core-Shield Cyber Labs</h1><p class="lead">A cybersecurity learning platform built around the idea that understanding should come before button-clicking: Concept over Syntax. Logic over Code.</p><a class="btn primary external" href="https://core-shield.enthernetservice.com">Open Core-Shield ↗</a><h2>What it contains</h2><p>Dashboard learning flows, course pages, a browser-based playground, an AI mentor and certificate support. The playground has been designed around isolated execution environments for Python, Node.js, Bash and PHP with bounded execution time and output.</p><h2>Learning model</h2><p>The platform is intended to teach how engineers reason about systems, not only which commands to copy. Course areas include Linux for Hackers, reverse proxy concepts, Ansible, web scraping and Wi-Fi security topics.</p><h2>Engineering concerns</h2><p>Running user-supplied code means isolation, resource ceilings, process lifetime, filesystem boundaries and output control are product requirements, not optional hardening.</p></div></main>"""
-write("projects/core-shield", layout("Core-Shield Cyber Labs", core))
 
-pinch = """<main class="page"><div class="wrap article"><span class="eyebrow">Project · Live</span><h1>Enthernet Pinch AI</h1><p class="lead">A research discovery and evidence-tracking assistant designed to help researchers find credible scholarly material without losing the provenance behind each result.</p><a class="btn primary external" href="https://pinchai.enthernetservice.com">Open Pinch AI ↗</a><h2>Source integrations</h2><p>OpenAlex, Crossref and Semantic Scholar feed a normalized source model so DOI, journal, author and open-access metadata can be compared rather than trapped in provider-specific responses.</p><h2>Why the audit trail matters</h2><p>A research assistant should not merely produce a citation-shaped sentence. It should preserve enough metadata to show where the source came from and allow the researcher to verify it.</p><h2>Operational details</h2><p>The system accounts for provider rate limits, polite request pools, 429 handling and raw metadata retention alongside normalized fields.</p></div></main>"""
-write("projects/pinch-ai", layout("Enthernet Pinch AI", pinch))
+# Projects
+project_index_cards = "".join(f'''<article class="project-card"><span class="kicker">{escape(p['kicker'])}</span><h3>{escape(p['name'])}</h3><p>{escape(p['summary'])}</p><div class="actions"><a class="text-link" href="/projects/{p['slug']}/">Open case study →</a>{f'<a class="btn btn-secondary" href="{p["live"]}">Live / source ↗</a>' if p['live'] else ''}</div></article>''' for p in PROJECTS)
+projects_body = f'''<section class="page-hero"><div class="shell"><span class="eyebrow">Projects</span><h1>Systems built to answer real questions.</h1><p class="lead">Each case study records the problem, constraints and engineering decisions, then points to a live system or source when one exists.</p></div></section><section class="section"><div class="shell"><div class="project-grid">{project_index_cards}</div></div></section>'''
+write("projects", layout("Projects | Enthernet", "Engineering case studies from Enthernet.", projects_body, "/projects/"))
+for p in PROJECTS:
+    live = f'<a class="btn btn-primary" href="{p["live"]}">Open live project / source ↗</a>' if p["live"] else ""
+    details = "".join(f"<li>{escape(x)}</li>" for x in p["details"])
+    body = f'''<section class="page-hero"><div class="shell"><span class="eyebrow">{escape(p['kicker'])}</span><h1>{escape(p['name'])}</h1><p class="lead">{escape(p['summary'])}</p><div class="actions">{live}<a class="btn btn-secondary" href="/projects/">All projects</a></div></div></section><section class="section"><div class="shell grid-2"><div class="panel card"><h3>Current engineering record</h3><ul>{details}</ul></div><div class="panel card"><h3>Case-study standard</h3><p>Architecture, constraints, failure modes, security decisions and verifiable evidence belong here as the project evolves. A live URL is linked when the system actually exists.</p></div></div></section>'''
+    write(f"projects/{p['slug']}", layout(f"{p['name']} | Enthernet", p["summary"], body, f"/projects/{p['slug']}/"))
 
-jhc = """<main class="page"><div class="wrap article"><span class="eyebrow">Project · Systems engineering</span><h1>JHC Media</h1><p class="lead">A live production engine concept for church media workflows, designed around predictable behavior under load rather than piling features on top of a fragile pipeline.</p><h2>Phase 0 questions</h2><p>What is the master clock? Can a camera frame reach the encoder without leaving the GPU? When encoding falls behind, what gets dropped and who is told?</p><h2>Clock model</h2><p>The current design uses the audio capture clock as master because audible discontinuity is especially punishing in live production.</p><h2>Operator model</h2><p>Preview and Program remain distinct. Bible text, lyrics, announcements and multi-camera inputs are selected without forcing the operator to rebuild layouts during a service.</p></div></main>"""
-write("projects/jhc-media", layout("JHC Media", jhc))
 
-automation = """<main class="page"><div class="wrap article"><span class="eyebrow">Project family</span><h1>Automation Systems</h1><p class="lead">A collection of workflow and infrastructure automation projects covering queues, mail protocols, browser automation, scheduling and service operations.</p><h2>Patterns used</h2><p>Python services, Redis-backed queues, Celery workers, IMAP/SMTP integrations, browser automation, Nginx reverse proxying and background job tracking.</p><h2>What matters beyond the happy path</h2><p>Rate limits, retries, idempotence, credential handling, queue visibility, delivery failures and recoverability are the parts that turn an automation script into an operational system.</p></div></main>"""
-write("projects/automation-systems", layout("Automation Systems", automation))
+# Engineering notes
+notes = [
+    ("ConfigMap subPath mounts do not refresh", "Kubernetes", "Normal projected ConfigMap files can update eventually; a subPath mount does not receive those automatic updates."),
+    ("Readiness and liveness answer different questions", "Kubernetes", "Readiness decides traffic eligibility. Liveness decides whether the container should be restarted."),
+    ("Container IPs are implementation detail", "Docker", "User-defined Docker networks provide DNS-based names. Hard-coded container IPs turn normal replacement into an outage."),
+    ("Every listening port needs an owner", "Linux Security", "Service inventory comes before firewall confidence. Know what is listening and why."),
+    ("Troubleshooting needs an order", "Networking", "DNS → route → transport → TLS → proxy → backend → disk is a more useful sequence than random command roulette."),
+    ("Rollback can still be failure", "Ansible", "A successful rescue path can leave a play green unless the deployment failure is deliberately re-raised."),
+]
+notes_html = "".join(f'<article class="card"><span class="tag">{escape(cat)}</span><h3>{escape(title)}</h3><p>{escape(text)}</p></article>' for title,cat,text in notes)
+notes_body = f'''<section class="page-hero"><div class="shell"><span class="eyebrow">Engineering Notes</span><h1>The details documentation summaries usually skip.</h1><p class="lead">Small operational traps worth preserving because they are usually learned after something fails.</p></div></section><section class="section"><div class="shell"><div class="grid-3">{notes_html}</div></div></section>'''
+write("articles", layout("Engineering Notes | Enthernet", "Field notes from cloud, Linux, networking, Docker and Kubernetes work.", notes_body, "/articles/"))
 
-notes = """<main class="page"><div class="wrap"><span class="eyebrow">Engineering Notes</span><h1>Details worth remembering because systems enjoy expensive lessons.</h1><div class="grid"><article class="card"><h3>ConfigMap subPath updates</h3><p>Mounted ConfigMap files can update eventually, while subPath mounts do not receive those updates.</p></article><article class="card"><h3>Readiness is traffic eligibility</h3><p>A running Kubernetes Pod can still be excluded from normal Service traffic when readiness fails.</p></article><article class="card"><h3>Docker names beat brittle IPs</h3><p>User-defined bridge networks provide DNS-based service discovery; container IPs can change.</p></article><article class="card"><h3>Every listening port needs an owner</h3><p>Linux hardening starts by making each exposed service justify why it exists.</p></article><article class="card"><h3>DHCP ports</h3><p>Server UDP 67, client UDP 68. Tiny detail, disproportionately popular source of wrong diagrams.</p></article><article class="card"><h3>TLS chain reality</h3><p>A leaf certificate is only useful when clients can build a trusted path through the required intermediates.</p></article></div></div></main>"""
-write("articles", layout("Engineering Notes", notes))
 
-research = """<main class="page"><div class="wrap"><span class="eyebrow">Research</span><h1>Separate evidence from the interesting idea.</h1><p class="lead">Research notes are organized so established evidence, supported inference, hypothesis, speculation and open questions do not quietly collapse into one confident paragraph.</p><div class="grid"><article class="card"><h3>Full Cell Sufficiency</h3><p>Wound healing, signalling, mitosis, tissue remodeling, resource sufficiency and controlled regeneration.</p><a class="go" href="/research/full-cell-sufficiency/">Research record →</a><br><a class="btn external" href="https://fcs.enthernet.com">Live research site ↗</a></article></div></div></main>"""
-write("research", layout("Research", research))
+# Research
+research_body = f'''<section class="page-hero"><div class="shell"><span class="eyebrow">Research</span><h1>Separate the evidence from the interesting idea.</h1><p class="lead">Research notes keep established evidence, inference and speculation visibly distinct.</p></div></section><section class="section"><div class="shell"><article class="project-card"><span class="kicker">Research framework</span><h3>{escape(RESEARCH['title'])}</h3><p>{escape(RESEARCH['summary'])}</p><div class="research-levels">{''.join(f'<span class="tag">{escape(x)}</span>' for x in RESEARCH['levels'])}</div><div class="actions"><a class="text-link" href="/research/full-cell-sufficiency/">Open research record →</a><a class="btn btn-secondary" href="{RESEARCH['live']}">Live FCS site ↗</a></div></article></div></section>'''
+write("research", layout("Research | Enthernet", RESEARCH["summary"], research_body, "/research/"))
+fcs_body = f'''<section class="page-hero"><div class="shell"><span class="eyebrow">Research framework · Live</span><h1>Full Cell Sufficiency</h1><p class="lead">{escape(RESEARCH['summary'])}</p><div class="actions"><a class="btn btn-primary" href="{RESEARCH['live']}">Open fcs.enthernet.com ↗</a></div></div></section><section class="section"><div class="shell grid-2"><div class="panel card"><h3>Research domains</h3><ul>{''.join(f'<li>{escape(x)}</li>' for x in RESEARCH['areas'])}</ul></div><div class="panel card"><h3>Evidence discipline</h3><div class="research-levels">{''.join(f'<span class="tag">{escape(x)}</span>' for x in RESEARCH['levels'])}</div><p>The framework is useful only if these categories remain separate. A plausible mechanism is not automatically an established biological result.</p></div></div></section>'''
+write("research/full-cell-sufficiency", layout("Full Cell Sufficiency | Enthernet", RESEARCH["summary"], fcs_body, "/research/full-cell-sufficiency/"))
 
-fcs = """<main class="page"><div class="wrap article"><span class="eyebrow">Research framework · Live</span><h1>Full Cell Sufficiency</h1><p class="lead">An exploratory framework examining whether regeneration and tissue repair can be understood partly through the sufficiency of cellular resources, signals and environmental conditions required for coordinated repair.</p><a class="btn primary external" href="https://fcs.enthernet.com">Open FCS site ↗</a><h2>Research domains</h2><p>Wound healing, cell signalling, mitosis, tissue remodeling, resource sufficiency and controlled regeneration.</p><h2>Evidence discipline</h2><p><span class="pill">Established evidence</span><span class="pill">Supported inference</span><span class="pill">Hypothesis</span><span class="pill">Speculation</span><span class="pill">Open question</span></p><p>The framework should be judged by how clearly those categories stay separated. Interesting mechanisms are not automatically established mechanisms.</p><h2>Current purpose</h2><p>The work is being developed as a research thesis and reading framework, with mechanistic literature used to test where the idea aligns with known biology and where it still requires evidence.</p></div></main>"""
-write("research/full-cell-sufficiency", layout("Full Cell Sufficiency", fcs))
 
-about = """<main class="page"><div class="wrap article"><span class="eyebrow">About</span><h1>Build. Break. Understand. Document.</h1><p class="lead">I work across software engineering, cybersecurity, automation, infrastructure, cloud and systems design. This site exists to turn that work into inspectable evidence rather than a list of technologies on a profile.</p><h2>What I am working toward</h2><p>Stronger reasoning across software → infrastructure → cloud → security → automation → systems design, with projects and technical notes showing the path.</p><h2>Why publish the failures too?</h2><p>Because a clean final command does not show whether someone understands the system. Failure modes, corrections and verification usually reveal more.</p></div></main>"""
-write("about", layout("About", about))
+# About + contact
+about_body = f'''<section class="page-hero"><div class="shell"><span class="eyebrow">About</span><h1>Infrastructure-first engineering, documented in public.</h1><p class="lead">Software engineer and cybersecurity specialist working across backend systems, Linux infrastructure, cloud, automation, reverse proxies, container networking and defensive architecture.</p></div></section><section class="section"><div class="shell grid-2"><div class="panel card"><h3>How I work</h3><p>Build → observe → break → verify → document. The goal is to understand how the layers interact instead of collecting framework names.</p></div><div class="panel card"><h3>Why this blog exists</h3><p>Recruiters, collaborators and future me should be able to inspect evidence: architecture, commands, failures, source code and the reasoning behind a decision.</p><div class="actions"><a class="btn btn-secondary" href="{SITE['portfolio']}">Portfolio ↗</a><a class="btn btn-secondary" href="{SITE['linkedin']}">LinkedIn ↗</a></div></div></div></section>'''
+write("about", layout("About | Enthernet", "About Enthernet and the engineering-in-public mission.", about_body, "/about/"))
+contact_body = f'''<section class="page-hero"><div class="shell"><span class="eyebrow">Contact</span><h1>Find the work where it lives.</h1><p class="lead">For software, infrastructure, cloud, security, automation or research conversations, use the public project channels below.</p><div class="actions"><a class="btn btn-primary" href="mailto:{SITE['email']}">Email</a><a class="btn btn-secondary" href="{SITE['github']}">GitHub ↗</a><a class="btn btn-secondary" href="{SITE['linkedin']}">LinkedIn ↗</a><a class="btn btn-secondary" href="https://core-shield.enthernetservice.com">Core-Shield ↗</a><a class="btn btn-secondary" href="https://pinchai.enthernetservice.com">Pinch AI ↗</a><a class="btn btn-secondary" href="https://fcs.enthernet.com">FCS ↗</a></div></div></section>'''
+write("contact", layout("Contact | Enthernet", "Contact Enthernet and browse live engineering projects.", contact_body, "/contact/"))
 
-contact = """<main class="page"><div class="wrap article"><span class="eyebrow">Contact</span><h1>Find the work where it lives.</h1><p class="lead">For engineering, cloud, security, automation or research conversations, use the public project channels below.</p><a class="btn primary" href="https://github.com/Enthernetcode">GitHub ↗</a><a class="btn" href="mailto:enthernet@enthernetservices.com">Email</a><a class="btn" href="https://core-shield.enthernetservice.com">Core-Shield ↗</a><a class="btn" href="https://pinchai.enthernetservice.com">Pinch AI ↗</a><a class="btn" href="https://fcs.enthernet.com">FCS ↗</a></div></main>"""
-write("contact", layout("Contact", contact))
 
-write("404.html", layout("Not Found", '<main class="page"><div class="wrap article"><span class="eyebrow">404</span><h1>That route escaped.</h1><p class="lead">The page does not exist or moved before it learned proper change management.</p><a class="btn primary" href="/">Back home</a></div></main>'))
-(OUT / "CNAME").write_text("blog.enthernet.com", encoding="utf-8")
-(OUT / ".nojekyll").write_text("", encoding="utf-8")
-(OUT / "robots.txt").write_text("User-agent: *\nAllow: /\nSitemap: https://blog.enthernet.com/sitemap.xml\n", encoding="utf-8")
+# Error, metadata and feeds
+write("404.html", layout("Not Found | Enthernet", "Page not found.", '<section class="page-hero"><div class="shell"><span class="eyebrow">404</span><h1>That route escaped.</h1><p class="lead">The page does not exist or moved before it learned change management.</p><a class="btn btn-primary" href="/">Back home</a></div></section>', "/404.html"))
+(DIST / "CNAME").write_text("blog.enthernet.com", encoding="utf-8")
+(DIST / ".nojekyll").write_text("", encoding="utf-8")
+(DIST / "robots.txt").write_text("User-agent: *\nAllow: /\nSitemap: https://blog.enthernet.com/sitemap.xml\n", encoding="utf-8")
 
-urls = ["/","/100-days/","/projects/","/projects/core-shield/","/projects/pinch-ai/","/projects/jhc-media/","/projects/automation-systems/","/articles/","/research/","/research/full-cell-sufficiency/","/about/","/contact/"] + [href(d) for d in DAYS]
-sitemap = '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + "".join(f"<url><loc>{BASE}{u}</loc></url>" for u in urls) + "</urlset>"
-(OUT / "sitemap.xml").write_text(sitemap, encoding="utf-8")
-print(f"Generated {len(list(OUT.rglob('*.html')))} HTML pages into {OUT}")
+urls = ["/", "/100-days/", "/projects/", "/articles/", "/research/", "/research/full-cell-sufficiency/", "/about/", "/contact/"]
+urls += [f"/projects/{p['slug']}/" for p in PROJECTS]
+urls += [day_href(d) for d in range(1,84)]
+sitemap = '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + "".join(f"<url><loc>{escape(BASE + u)}</loc></url>" for u in urls) + "</urlset>"
+(DIST / "sitemap.xml").write_text(sitemap, encoding="utf-8")
+
+items = []
+for day in range(83, max(0,83-20), -1):
+    title,_ = DAY_TITLES[day]
+    items.append(f'<item><title>Day {day}: {escape(title)}</title><link>{BASE}{day_href(day)}</link><guid>{BASE}{day_href(day)}</guid><description>{escape(summary_for(day))}</description></item>')
+rss = f'''<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>Enthernet Blog</title><link>{BASE}</link><description>{escape(SITE['description'])}</description>{''.join(items)}</channel></rss>'''
+(DIST / "rss.xml").write_text(rss, encoding="utf-8")
+
+snapshot = {
+    "generated_at": datetime.now(timezone.utc).isoformat(),
+    "current_day": 83,
+    "day_count": 83,
+    "unverified_days": sorted(UNVERIFIED_AWS),
+    "projects": PROJECTS,
+    "research": RESEARCH,
+}
+(DIST / "site-data.json").write_text(json.dumps(snapshot, indent=2), encoding="utf-8")
+
+print(f"Generated {len(list(DIST.rglob('*.html')))} HTML pages into {DIST}")
+print(f"Detailed day records: {len(DAY_CONTENT)}; unresolved historical topics: {len(UNVERIFIED_AWS)}")
