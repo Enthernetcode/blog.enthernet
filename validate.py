@@ -1,4 +1,5 @@
 from pathlib import Path
+from html import escape as html_escape
 from html.parser import HTMLParser
 import subprocess
 import sys
@@ -103,7 +104,8 @@ for day in range(1, 84):
     if not expected_art.exists():
         raise SystemExit(f"Missing Pic-of-the-Day asset for Day {day}")
     svg = expected_art.read_text(encoding="utf-8")
-    if f"Day {day}:" not in svg or DAYS[day]["title"] not in svg:
+    expected_title = f'<title id="title">Day {day}: {html_escape(DAYS[day]["title"])}</title>'
+    if expected_title not in svg:
         raise SystemExit(f"Day {day} visual is not tied to the correct topic")
 
 all_html = "\n".join(p.read_text(encoding="utf-8") for p in DIST.rglob("*.html"))
