@@ -1,6 +1,5 @@
 from pathlib import Path
 from html.parser import HTMLParser
-import re
 import subprocess
 import sys
 
@@ -13,6 +12,7 @@ from content.cicd import CICD_DAYS
 
 ROOT = Path(__file__).parent
 DIST = ROOT / "dist"
+ART_DIR = DIST / "assets" / "day-art"
 
 SOURCES = (AWS_DAYS, ANSIBLE_DAYS, LINUX_NETWORKING_DAYS, DOCKER_DAYS, KUBERNETES_DAYS, CICD_DAYS)
 DAYS = {}
@@ -74,7 +74,6 @@ for day in range(1, 84):
     if len(str(data["gotcha"]).strip()) < 45:
         errors.append(f"Day {day}: gotcha is too thin")
 
-# These have confirmed topics/content, but the original published artifact still needs recovery.
 if set(UNVERIFIED_AWS) != {1, 3, 5, 6, 7, 8, 9, 10, 14, 15, 17, 18}:
     errors.append("AWS archive-pending register changed unexpectedly")
 
@@ -84,8 +83,9 @@ if errors:
         print(" -", err)
     raise SystemExit(1)
 
-# Build the same artifact GitHub Pages will deploy.
+# Build the deployable artifact, then generate/attach the 83 repo-native visual assets.
 subprocess.run([sys.executable, str(ROOT / "generate.py")], check=True)
+subprocess.run([sys.executable, str(ROOT / "generate_day_art.py")], check=True)
 
 if not DIST.exists():
     raise SystemExit("Generator did not create dist/")
@@ -94,9 +94,29 @@ pages = sorted((DIST / "100-days").glob("day-*/index.html"))
 if len(pages) != 83:
     raise SystemExit(f"Expected 83 generated day pages, found {len(pages)}")
 
+art = sorted(ART_DIR.glob("day-*.svg"))
+if len(art) != 83:
+    raise SystemExit(f"Expected 83 Pic-of-the-Day SVGs, found {len(art)}")
+
+for day in range(1, 84):
+    expected_art = ART_DIR / f"day-{day:03d}.svg"
+    if not expected_art.exists():
+        raise SystemExit(f"Missing Pic-of-the-Day asset for Day {day}")
+    svg = expected_art.read_text(encoding="utf-8")
+    if f"Day {day}:" not in svg or DAYS[day]["title"] not in svg:
+        raise SystemExit(f"Day {day} visual is not tied to the correct topic")
+
 all_html = "\n".join(p.read_text(encoding="utf-8") for p in DIST.rglob("*.html"))
 if "Topic pending archive verification" in all_html:
     raise SystemExit("Old placeholder title leaked into generated HTML")
+if "queued for the visual pass" in all_html:
+    raise SystemExit("Old Pic-of-the-Day placeholder leaked into generated HTML")
+
+for day in range(1, 84):
+    marker = f"/assets/day-art/day-{day:03d}.svg"
+    if marker not in all_html:
+        raise SystemExit(f"Rendered HTML does not reference Day {day} visual")
+
 for required_link in (
     "https://core-shield.enthernetservice.com",
     "https://pinchai.enthernetservice.com",
@@ -155,6 +175,7 @@ if missing:
 print("VALIDATION PASSED")
 print(" - 83/83 day records contain required rich-content fields")
 print(" - 83/83 day routes generated")
-print(" - no old placeholder titles in rendered HTML")
+print(" - 83/83 Pic-of-the-Day SVG assets generated and attached")
+print(" - no old content or visual placeholders in rendered HTML")
 print(" - live project/research links present")
 print(" - internal-link check passed")
