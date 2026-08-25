@@ -1,0 +1,93 @@
+{
+  "generated_at": "2026-08-25T11:41:55.907765+00:00",
+  "current_day": 83,
+  "day_count": 83,
+  "artifact_pending_days": [
+    1,
+    3,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    14,
+    15,
+    17,
+    18
+  ],
+  "projects": [
+    {
+      "slug": "core-shield",
+      "name": "Core-Shield Cyber Labs",
+      "kicker": "Cybersecurity Education Platform",
+      "summary": "A hands-on cybersecurity learning platform built around Concept over Syntax and Logic over Code.",
+      "live": "https://core-shield.enthernetservice.com",
+      "details": [
+        "Browser-based playground for Python, Node.js, Bash and PHP labs with bounded execution.",
+        "Course areas spanning Linux, reverse proxies, Ansible, web scraping and Wi-Fi security.",
+        "AI mentor, dashboards and certificate flows designed around understanding rather than button memorization.",
+        "Isolation, resource ceilings and untrusted-code execution are product requirements, not optional hardening."
+      ]
+    },
+    {
+      "slug": "pinch-ai",
+      "name": "Enthernet Pinch AI",
+      "kicker": "Research Discovery & Evidence",
+      "summary": "A research assistant that discovers scholarly sources while preserving metadata and provenance for verification.",
+      "live": "https://pinchai.enthernetservice.com",
+      "details": [
+        "OpenAlex, Crossref and Semantic Scholar integrations.",
+        "Normalized source model for DOI, journal, author and open-access metadata.",
+        "429/rate-limit handling and polite provider request behavior.",
+        "Raw metadata retention and an audit trail so citation-shaped text is not treated as evidence by appearance alone."
+      ]
+    },
+    {
+      "slug": "jhc-media",
+      "name": "JHC Media",
+      "kicker": "Live Media Systems Engineering",
+      "summary": "A low-strain church production engine concept built around deterministic clocks, GPU paths and explicit backpressure.",
+      "live": null,
+      "details": [
+        "Audio capture clock selected as the Phase 0 master clock.",
+        "Preview and Program remain separate operator states.",
+        "Zero-copy camera-to-encoder path is a measured Phase 0 requirement, not an assumption.",
+        "Backpressure policy must state what gets dropped and who is informed when encoding falls behind."
+      ]
+    },
+    {
+      "slug": "automation-systems",
+      "name": "Automation Systems",
+      "kicker": "Queues, Mail & Infrastructure",
+      "summary": "Production automation work around mail aggregation, task queues, browser automation and Linux service operations.",
+      "live": "https://github.com/Enthernetcode",
+      "details": [
+        "Python services with Redis/Celery background workers.",
+        "IMAP/SMTP integration, scheduling and failure handling.",
+        "Nginx reverse proxy and resource-constrained VPS operations.",
+        "Operational focus on retries, idempotence, credentials, queue visibility and recoverability."
+      ]
+    }
+  ],
+  "research": {
+    "title": "Full Cell Sufficiency",
+    "summary": "An evidence-tracked framework exploring wound healing, cell signaling, mitosis, tissue remodeling, resource sufficiency and controlled regeneration.",
+    "live": "https://fcs.enthernet.com",
+    "levels": [
+      "Established evidence",
+      "Supported inference",
+      "Hypothesis",
+      "Speculation",
+      "Open question"
+    ],
+    "areas": [
+      "Wound healing",
+      "Cell signaling",
+      "Mitosis",
+      "Tissue remodeling",
+      "Resource sufficiency",
+      "Controlled regeneration"
+    ]
+  }
+}

@@ -1,29 +1,17 @@
 from pathlib import Path
 from html import escape as html_escape
 from html.parser import HTMLParser
-import subprocess
-import sys
 
-from content.aws import AWS_DAYS, UNVERIFIED_AWS
-from content.ansible import ANSIBLE_DAYS
-from content.linux_networking import LINUX_NETWORKING_DAYS
-from content.docker import DOCKER_DAYS
-from content.kubernetes import KUBERNETES_DAYS
-from content.cicd import CICD_DAYS
+from content import DAY_CONTENT as DAYS, PUBLISHED_DAYS, LAST_DAY, UNVERIFIED_AWS
+import generate
+import generate_day_art
+import seo_postprocess
 
 ROOT = Path(__file__).parent
 DIST = ROOT / "dist"
 ART_DIR = DIST / "assets" / "day-art"
 
-SOURCES = (AWS_DAYS, ANSIBLE_DAYS, LINUX_NETWORKING_DAYS, DOCKER_DAYS, KUBERNETES_DAYS, CICD_DAYS)
-DAYS = {}
-for source in SOURCES:
-    overlap = set(DAYS).intersection(source)
-    if overlap:
-        raise SystemExit(f"Duplicate day definitions: {sorted(overlap)}")
-    DAYS.update(source)
-
-EXPECTED = set(range(1, 84))
+EXPECTED = set(PUBLISHED_DAYS)
 actual = set(DAYS)
 if actual != EXPECTED:
     missing = sorted(EXPECTED - actual)
@@ -34,7 +22,7 @@ REQUIRED = {"title", "phase", "status", "summary", "architecture", "how", "comma
 PLACEHOLDER_PATTERNS = ("topic pending archive verification", "todo", "tbd", "lorem ipsum", "this day focused on")
 errors = []
 seen_titles = set()
-for day in range(1, 84):
+for day in PUBLISHED_DAYS:
     data = DAYS[day]
     missing = REQUIRED - set(data)
     if missing:
@@ -70,19 +58,20 @@ if errors:
     raise SystemExit(1)
 
 # Generate deployable HTML, attach day visuals, then apply the SEO/entity layer.
-subprocess.run([sys.executable, str(ROOT / "generate.py")], check=True)
-subprocess.run([sys.executable, str(ROOT / "generate_day_art.py")], check=True)
-subprocess.run([sys.executable, str(ROOT / "seo_postprocess.py")], check=True)
+generate.main()
+generate_day_art.main()
+seo_postprocess.main()
 
 if not DIST.exists():
     raise SystemExit("Generator did not create dist/")
+expected_count = len(PUBLISHED_DAYS)
 pages = sorted((DIST / "100-days").glob("day-*/index.html"))
-if len(pages) != 83:
-    raise SystemExit(f"Expected 83 generated day pages, found {len(pages)}")
+if len(pages) != expected_count:
+    raise SystemExit(f"Expected {expected_count} generated day pages, found {len(pages)}")
 art = sorted(ART_DIR.glob("day-*.svg"))
-if len(art) != 83:
-    raise SystemExit(f"Expected 83 Pic-of-the-Day SVGs, found {len(art)}")
-for day in range(1, 84):
+if len(art) != expected_count:
+    raise SystemExit(f"Expected {expected_count} Pic-of-the-Day SVGs, found {len(art)}")
+for day in PUBLISHED_DAYS:
     expected_art = ART_DIR / f"day-{day:03d}.svg"
     if not expected_art.exists():
         raise SystemExit(f"Missing Pic-of-the-Day asset for Day {day}")
@@ -97,7 +86,7 @@ if "Topic pending archive verification" in all_html:
     raise SystemExit("Old placeholder title leaked into generated HTML")
 if "queued for the visual pass" in all_html:
     raise SystemExit("Old Pic-of-the-Day placeholder leaked into generated HTML")
-for day in range(1, 84):
+for day in PUBLISHED_DAYS:
     marker = f"/assets/day-art/day-{day:03d}.svg"
     if marker not in all_html:
         raise SystemExit(f"Rendered HTML does not reference Day {day} visual")
@@ -171,9 +160,9 @@ if missing:
     raise SystemExit(f"Required generated files missing: {missing}")
 
 print("VALIDATION PASSED")
-print(" - 83/83 day records contain required rich-content fields")
-print(" - 83/83 day routes generated")
-print(" - 83/83 Pic-of-the-Day SVG assets generated and attached")
+print(f" - {expected_count}/{expected_count} day records contain required rich-content fields")
+print(f" - {expected_count}/{expected_count} day routes generated")
+print(f" - {expected_count}/{expected_count} Pic-of-the-Day SVG assets generated and attached")
 print(" - Enthernet entity graph, canonical and social metadata validated")
 print(" - no old content or visual placeholders in rendered HTML")
 print(" - live project/research links present")

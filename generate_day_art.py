@@ -3,21 +3,12 @@ from html import escape
 import re
 import textwrap
 
-from content.aws import AWS_DAYS, UNVERIFIED_AWS
-from content.ansible import ANSIBLE_DAYS
-from content.linux_networking import LINUX_NETWORKING_DAYS
-from content.docker import DOCKER_DAYS
-from content.kubernetes import KUBERNETES_DAYS
-from content.cicd import CICD_DAYS
+from content import DAY_CONTENT as DAYS, PUBLISHED_DAYS, UNVERIFIED_AWS
 
 ROOT = Path(__file__).parent
 DIST = ROOT / "dist"
 ART_DIR = DIST / "assets" / "day-art"
 BASE = "https://blog.enthernet.com"
-
-DAYS = {}
-for source in (AWS_DAYS, ANSIBLE_DAYS, LINUX_NETWORKING_DAYS, DOCKER_DAYS, KUBERNETES_DAYS, CICD_DAYS):
-    DAYS.update(source)
 
 PHASE_STYLE = {
     "AWS Networking Foundations": ("#FFB84D", "#33200B"),
@@ -155,16 +146,16 @@ def patch_day_page(day, data):
 
 
 def main():
-    if set(DAYS) != set(range(1, 84)):
-        raise SystemExit("Day-art generator requires exactly Days 1-83")
+    if set(DAYS) != set(PUBLISHED_DAYS):
+        raise SystemExit(f"Day-art generator requires content keys to equal {PUBLISHED_DAYS}")
     ART_DIR.mkdir(parents=True, exist_ok=True)
     for old in ART_DIR.glob("day-*.svg"):
         old.unlink()
-    for day in range(1, 84):
+    for day in PUBLISHED_DAYS:
         data = DAYS[day]
         (ART_DIR / f"day-{day:03d}.svg").write_text(svg_for(day, data), encoding="utf-8")
         patch_day_page(day, data)
-    print(f"Generated and attached 83 Pic-of-the-Day SVG assets in {ART_DIR}")
+    print(f"Generated and attached {len(PUBLISHED_DAYS)} Pic-of-the-Day SVG assets in {ART_DIR}")
 
 
 if __name__ == "__main__":
