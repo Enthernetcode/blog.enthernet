@@ -3,6 +3,8 @@ from html import escape
 import json
 import re
 
+from content import LAST_DAY
+
 ROOT = Path(__file__).parent
 DIST = ROOT / "dist"
 BASE = "https://blog.enthernet.com"
@@ -54,6 +56,41 @@ def ensure_canonical(html, url):
     return html.replace("</head>", tag + "</head>", 1)
 
 
+def sync_journey_state():
+    """Keep generated journey UI derived from the actual published content count."""
+    styles = DIST / "assets" / "styles.css"
+    if styles.exists():
+        css = styles.read_text(encoding="utf-8")
+        css = re.sub(
+            r'(\.progress i\{display:block;width:)\d+(%;height:100%)',
+            rf'\g<1>{LAST_DAY}\g<2>',
+            css,
+            count=1,
+        )
+        styles.write_text(css, encoding="utf-8")
+
+    archive = DIST / "100-days" / "index.html"
+    if archive.exists():
+        html = archive.read_text(encoding="utf-8")
+        # FUTURE in generate.py is a roadmap seed. Never let already-published days
+        # render as planned work if the seed lags behind the content modules.
+        for day in range(1, LAST_DAY + 1):
+            html = re.sub(
+                rf'<article class="card"><span class="tag">PLANNED · DAY {day}</span>.*?</article>',
+                '',
+                html,
+                flags=re.S,
+            )
+        next_day = LAST_DAY + 1
+        html = re.sub(
+            r'(<span class="eyebrow">Roadmap ahead</span><h2>)Days \d+–100(</h2>)',
+            rf'\g<1>Days {next_day}–100\g<2>',
+            html,
+            count=1,
+        )
+        archive.write_text(html, encoding="utf-8")
+
+
 person = {
     "@type": "Person",
     "@id": BASE + "/#renuel-roberts",
@@ -85,6 +122,8 @@ website = {
 }
 
 def main():
+    sync_journey_state()
+
     for path in DIST.rglob("*.html"):
         html = path.read_text(encoding="utf-8")
         url = url_for(path)
@@ -144,7 +183,7 @@ def main():
 
         path.write_text(html, encoding="utf-8")
 
-    print("Applied Enthernet entity SEO, self-canonicals, social metadata and structured data to generated HTML")
+    print(f"Applied Enthernet SEO and synchronized journey state at Day {LAST_DAY}")
 
 
 if __name__ == "__main__":
