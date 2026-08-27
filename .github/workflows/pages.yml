@@ -29,8 +29,11 @@ jobs:
       - name: Validate content and generate site
         run: python3 validate.py
 
-      - name: Attach confirmed LinkedIn provenance
+      - name: Attach confirmed LinkedIn provenance to day pages
         run: python3 linkedin_postprocess.py
+
+      - name: Attach confirmed LinkedIn provenance to archive
+        run: python3 archive_provenance_postprocess.py
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
