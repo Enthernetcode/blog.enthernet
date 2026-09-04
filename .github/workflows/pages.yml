@@ -35,6 +35,9 @@ jobs:
       - name: Attach confirmed LinkedIn provenance to archive
         run: python3 archive_provenance_postprocess.py
 
+      - name: Attach Days 86-92 LinkedIn provenance
+        run: python3 recent_linkedin_postprocess.py
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
