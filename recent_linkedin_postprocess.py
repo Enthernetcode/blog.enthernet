@@ -12,16 +12,19 @@ RECENT_LINKEDIN_POSTS = {
     90: "https://www.linkedin.com/posts/renuel-roberts-st-enthernet-code-6571a7241_100daysofcloudandsecurity-100daysofcloudandsecurity-activity-7500455503269904385-U1Np",
     91: "https://www.linkedin.com/posts/renuel-roberts-st-enthernet-code-6571a7241_100daysofcloudandsecurity-100daysofcloudandsecurity-activity-7500820915140685826-pw35",
     92: "https://www.linkedin.com/posts/renuel-roberts-st-enthernet-code-6571a7241_100daysofcloudandsecurity-100daysofcloudandsecurity-activity-7501178344462327809-u5zM",
+    93: "https://www.linkedin.com/posts/renuel-roberts-st-enthernet-code-6571a7241_100daysofcloudandsecurity-100daysofcloudandsecurity-activity-7501549241425641472-InC3",
+    94: "https://www.linkedin.com/posts/renuel-roberts-st-enthernet-code-6571a7241_100daysofcloudandsecurity-100daysofcloudandsecurity-activity-7501912220402950145-00ct",
+    95: "https://www.linkedin.com/posts/renuel-roberts-st-enthernet-code-6571a7241_100daysofcloudandsecurity-100daysofcloudandsecurity-activity-7502279380207861761-spg3",
+    96: "https://www.linkedin.com/posts/renuel-roberts-st-enthernet-code-6571a7241_100daysofcloudandsecurity-100daysofcloudandsecurity-activity-7502640045917446145-PO01",
+    97: "https://www.linkedin.com/posts/renuel-roberts-st-enthernet-code-6571a7241_100daysofcloudandsecurity-100daysofcloudandsecurity-activity-7502988799224877057-6Poh",
+    98: "https://www.linkedin.com/posts/renuel-roberts-st-enthernet-code-6571a7241_100daysofcloudandsecurity-100daysofcloudandsecurity-activity-7503777856154497026-3Efn",
+    99: "https://www.linkedin.com/posts/renuel-roberts-st-enthernet-code-6571a7241_100daysofcloudandsecurity-100daysofcloudandsecurity-activity-7503777520580825091-ClYr",
 }
 
 
 def artifact_block(day: int, url: str) -> str:
-    return (
-        '<div class="callout" data-linkedin-artifact="confirmed">'
-        '<strong>Original publication recovered.</strong> '
-        f'<a class="text-link" href="{url}" target="_blank" rel="noopener noreferrer">'
-        f'View the original Day {day} LinkedIn post ↗</a></div>'
-    )
+    return ('<div class="callout" data-linkedin-artifact="confirmed"><strong>Original publication recovered.</strong> '
+            f'<a class="text-link" href="{url}" target="_blank" rel="noopener noreferrer">View the original Day {day} LinkedIn post ↗</a></div>')
 
 
 def main() -> None:
@@ -56,7 +59,7 @@ def main() -> None:
             raise SystemExit(f"Day {day}: LinkedIn permalink missing after pass")
 
     print("RECENT LINKEDIN PROVENANCE PASSED")
-    print(" - Days 86-92 linked to their original LinkedIn publications")
+    print(" - Days 86-99 linked to their original LinkedIn publications")
 
 
 if __name__ == "__main__":
