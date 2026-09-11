@@ -1,40 +1,35 @@
 # Enthernet Blog
 
-Static technical hub for https://blog.enthernet.com and the permanent archive for `#100DaysOfCloudAndSecurity`.
+Static technical hub for https://blog.enthernet.com and the permanent evidence-aware archive for `#100DaysOfCloudAndSecurity`.
 
 ## Current state
 
-- Day 1 through Day 83 each have a stable generated route and topic-specific engineering record.
-- Days 84–100 are shown as planned roadmap entries, not published work.
-- The exact Day 1–18 topic map is populated:
-  1. AWS Free Tier & AWS Console
-  2. IAM & Least Privilege
-  3. EC2
-  4. Security Groups
-  5. Network ACLs
-  6. Amazon VPC
-  7. Subnets
-  8. Route Tables
-  9. Internet Gateway
-  10. NAT Gateway
-  11. VPC Endpoints
-  12. VPC Peering
-  13. Transit Gateway
-  14. Review + Practical Lab
-  15. Elastic Load Balancer
-  16. Auto Scaling
-  17. CloudWatch
-  18. CloudTrail
-- Twelve early AWS rows remain marked **archive artifact pending** in the canonical evidence ledger. Their exact topics are confirmed and their blog articles are populated, but ledger verification status is not promoted without original screenshots/video/repository evidence.
-- Published history is not silently rewritten; corrections are recorded forward.
+- **Day 1 through Day 99** have published, topic-specific engineering records and stable generated routes.
+- **Day 100** remains intentionally unpublished in the repository until its final publication/artifact is available. It is not fabricated or backfilled from chronology.
+- The journey now spans AWS foundations, infrastructure as code, Ansible, Linux administration and networking, Docker, Kubernetes, CI/CD, observability, cloud security, DevSecOps automation and production security review.
+- Days **86–99** have recovered/confirmed LinkedIn provenance attached during the publication pipeline. Days **93–99** were manually verified against their publication artifacts before mapping their permalinks.
+- Twelve early AWS rows remain marked **archive artifact pending** in the canonical evidence ledger: Days 1, 3, 5, 6, 7, 8, 9, 10, 14, 15, 17 and 18. Their topics and technical records are populated, but their evidence status is not promoted without original publication evidence.
+- Published history is not silently rewritten; corrections and recovered provenance are recorded forward.
+
+## Recent cloud-security sequence
+
+- Day 91 — AWS Shared Responsibility Model
+- Day 92 — AWS IAM Best Practices / Least Privilege
+- Day 93 — AWS Secrets Management
+- Day 94 — Amazon GuardDuty & AWS Security Hub CSPM
+- Day 95 — AWS WAF & Shield
+- Day 96 — AWS Security Automation with EventBridge & Lambda
+- Day 97 — Security Remediation Workflows with Step Functions & Systems Manager
+- Day 98 — AWS Organizations & Control Tower
+- Day 99 — Production AWS Security Review: Connecting the Controls
 
 ## What each Day page contains
 
-Every Day 1–83 record is expected to include:
+Every published Day record is expected to include:
 
 - topic summary
 - architecture / mental model
-- at least three explanatory paragraphs
+- explanatory implementation notes
 - hands-on commands, YAML or technical reference
 - verification procedure
 - field gotcha
@@ -43,6 +38,8 @@ Every Day 1–83 record is expected to include:
 - evidence note
 - previous/next navigation
 - SEO article metadata
+- Pic-of-the-Day asset generated from the registered topic
+- LinkedIn provenance where the original publication has been confirmed
 
 ## Sections
 
@@ -65,42 +62,57 @@ content/
 ├── linux_networking.py
 ├── docker.py
 ├── kubernetes.py
-└── cicd.py
+├── cicd.py
+└── observability_security.py
 ```
 
-`generate.py` renders the site from these evidence-aware content modules into `dist/`.
+`content/__init__.py` combines the evidence-aware modules and derives `LAST_DAY` from the registered content. `generate.py` renders the deployable site into `dist/`.
+
+## Publication and provenance pipeline
+
+The build separates technical content from recovered social-publication evidence:
+
+1. `validate.py` validates registered day content and generates the deployable archive.
+2. `generate_day_art.py` produces topic-linked Pic-of-the-Day SVG assets.
+3. `seo_postprocess.py` applies the canonical/entity/SEO layer.
+4. LinkedIn provenance post-processors attach confirmed original-publication links and promote archive evidence labels only for mapped artifacts.
+5. GitHub Pages uploads the resulting `dist/` artifact only after the validation/deployment workflow succeeds.
+
+This keeps social evidence additive rather than making the technical archive dependent on LinkedIn availability.
 
 ## Build and validation
 
-Run the full publication gate locally with:
+Run the publication gate locally with:
 
 ```bash
 python3 validate.py
 ```
 
-The validator checks:
+The validator derives the expected day count from `PUBLISHED_DAYS`, so it follows the registered journey automatically instead of hard-coding an obsolete Day 83 boundary. It checks:
 
-- all 83 day records exist exactly once
-- required rich-content fields exist and are non-empty
+- every registered Day from 1 through `LAST_DAY` exists exactly once
+- required rich-content fields are present and non-empty
 - explanatory sections are not thin placeholders
-- all 83 generated day routes exist
+- all expected generated day routes exist
+- each published day has its matching Pic-of-the-Day SVG
 - old placeholder titles do not leak into rendered HTML
 - Core-Shield, Pinch AI and FCS live links are present
+- canonical, robots, social and Enthernet entity metadata survive generation
 - internal links resolve
-- required generated metadata/files exist
-
-`validate.py` runs `generate.py` itself after the content checks, so the artifact it validates is the same `dist/` directory GitHub Pages uploads.
+- sitemap, RSS, robots.txt, CNAME and other required generated files exist
 
 ## GitHub Pages
 
-`.github/workflows/pages.yml` runs `python3 validate.py` on every push to `main`. Deployment only continues if the validation gate passes, then `dist/` is uploaded with GitHub Pages.
+`.github/workflows/pages.yml` runs the publication pipeline on pushes to `main`. Deployment continues only after validation succeeds, then `dist/` is uploaded through GitHub Pages.
 
-Repository Pages source is configured for **GitHub Actions**. The custom domain is `blog.enthernet.com`, and the generated site includes a matching `CNAME` file.
+Repository Pages source is configured for **GitHub Actions**. The custom domain is `blog.enthernet.com`, and the generated site includes the matching `CNAME` file.
 
 ## Evidence policy
 
-Published artifacts outrank reconstructions. The canonical roadmap/ledger remains the verification record. Where a topic is known but the original historical artifact has not yet been recovered, the blog carries a clearly labeled technical reconstruction while the ledger remains artifact-pending.
+Published artifacts outrank reconstructions. A supplied URL is not assigned to a Day merely because its LinkedIn activity ID appears chronologically correct. Provenance is mapped only when the Day/topic can be confirmed from the publication or its artifact.
 
-## Visual pass
+Where a historical topic is known but its original artifact has not been recovered, the technical article can remain available while the evidence ledger stays explicitly artifact-pending. This prevents archive completeness from being manufactured by guesswork.
 
-Pic-of-the-Day assets remain intentionally separate from the written archive. They should be generated only after the technical content for a day is settled, then linked to that day's page and social/carousel workflow.
+## Day 100
+
+Day 100 is reserved for the final showcase/capstone publication. It will be added when the actual Day 100 record and publication evidence are available, completing the archive without inventing the final artifact for the sake of a prettier counter.
