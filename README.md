@@ -4,10 +4,10 @@ Static technical hub for https://blog.enthernet.com and the permanent evidence-a
 
 ## Current state
 
-- **Day 1 through Day 99** have published, topic-specific engineering records and stable generated routes.
-- **Day 100** remains intentionally unpublished in the repository until its final publication/artifact is available. It is not fabricated or backfilled from chronology.
-- The journey now spans AWS foundations, infrastructure as code, Ansible, Linux administration and networking, Docker, Kubernetes, CI/CD, observability, cloud security, DevSecOps automation and production security review.
-- Days **86–99** have recovered/confirmed LinkedIn provenance attached during the publication pipeline. Days **93–99** were manually verified against their publication artifacts before mapping their permalinks.
+- **Day 1 through Day 100** have published, topic-specific engineering records and stable generated routes.
+- **Day 100** is published as the final showcase: **100 Days Later: From AWS Foundations to Production Security**.
+- The completed journey spans AWS foundations, infrastructure as code, Ansible, Linux administration and networking, Docker, Kubernetes, CI/CD, observability, cloud security, DevSecOps automation and production security review.
+- Days **86–100** have recovered/confirmed LinkedIn provenance attached during the publication pipeline. Days **93–100** were manually verified against their publication artifacts before mapping their publication links.
 - Twelve early AWS rows remain marked **archive artifact pending** in the canonical evidence ledger: Days 1, 3, 5, 6, 7, 8, 9, 10, 14, 15, 17 and 18. Their topics and technical records are populated, but their evidence status is not promoted without original publication evidence.
 - Published history is not silently rewritten; corrections and recovered provenance are recorded forward.
 
@@ -22,6 +22,7 @@ Static technical hub for https://blog.enthernet.com and the permanent evidence-a
 - Day 97 — Security Remediation Workflows with Step Functions & Systems Manager
 - Day 98 — AWS Organizations & Control Tower
 - Day 99 — Production AWS Security Review: Connecting the Controls
+- Day 100 — 100 Days Later: From AWS Foundations to Production Security
 
 ## What each Day page contains
 
@@ -63,7 +64,8 @@ content/
 ├── docker.py
 ├── kubernetes.py
 ├── cicd.py
-└── observability_security.py
+├── observability_security.py
+└── day100.py
 ```
 
 `content/__init__.py` combines the evidence-aware modules and derives `LAST_DAY` from the registered content. `generate.py` renders the deployable site into `dist/`.
@@ -88,7 +90,7 @@ Run the publication gate locally with:
 python3 validate.py
 ```
 
-The validator derives the expected day count from `PUBLISHED_DAYS`, so it follows the registered journey automatically instead of hard-coding an obsolete Day 83 boundary. It checks:
+The validator derives the expected day count from `PUBLISHED_DAYS`, so it follows the registered journey automatically. It checks:
 
 - every registered Day from 1 through `LAST_DAY` exists exactly once
 - required rich-content fields are present and non-empty
@@ -115,4 +117,4 @@ Where a historical topic is known but its original artifact has not been recover
 
 ## Day 100
 
-Day 100 is reserved for the final showcase/capstone publication. It will be added when the actual Day 100 record and publication evidence are available, completing the archive without inventing the final artifact for the sake of a prettier counter.
+Day 100 completes `#100DaysOfCloudAndSecurity` with the final showcase **100 Days Later: From AWS Foundations to Production Security**. Its successful LinkedIn publication was manually verified from the supplied artifact, and its publication link is attached by the provenance pipeline. The 100-day archive is complete while unresolved historical provenance remains explicitly marked rather than guessed.
