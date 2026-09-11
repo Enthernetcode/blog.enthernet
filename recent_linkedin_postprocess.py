@@ -19,6 +19,7 @@ RECENT_LINKEDIN_POSTS = {
     97: "https://www.linkedin.com/posts/renuel-roberts-st-enthernet-code-6571a7241_100daysofcloudandsecurity-100daysofcloudandsecurity-activity-7502988799224877057-6Poh",
     98: "https://www.linkedin.com/posts/renuel-roberts-st-enthernet-code-6571a7241_100daysofcloudandsecurity-100daysofcloudandsecurity-activity-7503777856154497026-3Efn",
     99: "https://www.linkedin.com/posts/renuel-roberts-st-enthernet-code-6571a7241_100daysofcloudandsecurity-100daysofcloudandsecurity-activity-7503777520580825091-ClYr",
+    100: "https://lnkd.in/p/eec_bW_D",
 }
 
 
@@ -59,7 +60,7 @@ def main() -> None:
             raise SystemExit(f"Day {day}: LinkedIn permalink missing after pass")
 
     print("RECENT LINKEDIN PROVENANCE PASSED")
-    print(" - Days 86-99 linked to their original LinkedIn publications")
+    print(" - Days 86-100 linked to their confirmed original LinkedIn publications")
 
 
 if __name__ == "__main__":
