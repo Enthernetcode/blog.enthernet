@@ -38,6 +38,11 @@ jobs:
       - name: Attach Days 86-92 LinkedIn provenance
         run: python3 recent_linkedin_postprocess.py
 
+      - name: Install favicon in generated site
+        run: |
+          cp favicon.ico dist/favicon.ico
+          find dist -name '*.html' -type f -exec sed -i 's#</head>#<link rel="icon" href="/favicon.ico" type="image/x-icon"></head>#' {} +
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
